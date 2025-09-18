@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ednna - Chatbot Inteligente | Netunna Software</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #9b59b6;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+        
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .logo-icon {
+            font-size: 2.5rem;
+            color: var(--secondary);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .chat-container {
+            flex: 2;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: var(--secondary);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chat-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        
+        .chat-messages {
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 15px;
+            border-radius: 18px;
+            line-height: 1.4;
+        }
+        
+        .bot-message {
+            background: var(--light);
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .user-message {
+            background: var(--secondary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #eee;
+            background: #f9f9f9;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 16px;
+        }
+        
+        .chat-input button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .chat-input button:hover {
+            background: var(--primary);
+        }
+        
+        .info-panel {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-icon {
+            background: var(--light);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--secondary);
+        }
+        
+        .feature-text h3 {
+            margin-bottom: 5px;
+            color: var(--dark);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        
+        .stat {
+            text-align: center;
+            background: var(--light);
+            padding: 15px;
+            border-radius: 10px;
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: var(--primary);
+            color: white;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .stat {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">🤖</div>
+                <div>
+                    <h1>Ednna Chatbot</h1>
+                    <p class="subtitle">Solução inteligente da Netunna Software</p>
+                </div>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="logo-icon">💬</div>
+                    <div>
+                        <h2>Ednna Assistant</h2>
+                        <p>Conectado ao banco de dados</p>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message bot-message">
+                        Olá! Eu sou a Ednna, assistente virtual da Netunna Software. Como posso ajudar você hoje?
+                    </div>
+                    <div class="message bot-message">
+                        Estou integrada com o banco de dados e posso responder perguntas sobre nossos produtos, serviços e muito mais.
+                    </div>
+                </div>
+                
+                <div class="chat-input">
+                    <input type="text" id="user-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()">Enviar</button>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h2 class="info-title">Recursos da Ednna</h2>
+                
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-text">
+                        <h3>Integração com Banco de Dados</h3>
+                        <p>Acesso em tempo real às informações da empresa</p>
+                    </div>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-text">
+                        <h3>Inteligência Artificial</h3>
+                        <p>Algoritmos de ML para respostas inteligentes</p>
+                    </div>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-text">
+                        <h3>Busca Contextual</h3>
+                        <p>Encontre informações com base no contexto da conversa</p>
+                    </div>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <div class="feature-text">
+                        <h3>Multiplataforma</h3>
+                        <p>Disponível para web, mobile e aplicativos desktop</p>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-number">95%</div>
+                        <div class="stat-label">Precisão</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Disponibilidade</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">1.2s</div>
+                        <div class="stat-label">Tempo de Resposta</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Netunna Software &copy; 2023 - Desenvolvendo soluções inteligentes para seu negócio</p>
+        </footer>
+    </div>
+
+    <script>
+        // Simulação de banco de dados com perguntas e respostas
+        const knowledgeBase = [
+            {
+                question: "quem é você",
+                answer: "Eu sou a Ednna, assistente virtual inteligente da Netunna Software. Fui desenvolvida para ajudar com informações sobre produtos, serviços e suporte técnico."
+            },
+            {
+                question: "o que é a netunna software",
+                answer: "A Netunna Software é uma empresa especializada em desenvolvimento de soluções inteligentes, incluindo sistemas de gestão, aplicativos personalizados e integração com IA."
+            },
+            {
+                question: "quais serviços vocês oferecem",
+                answer: "Oferecemos: desenvolvimento de software personalizado, integração de sistemas, chatbots inteligentes, análise de dados, consultoria em TI e soluções em nuvem."
+            },
+            {
+                question: "como posso entrar em contato",
+                answer: "Você pode entrar em contato conosco pelo telefone (11) 3456-7890, pelo email contato@netunna.com.br ou através do nosso site www.netunna.com.br"
+            },
+            {
+                question: "você tem integração com banco de dados",
+                answer: "Sim! Estou integrada com um banco de dados que me permite acessar informações atualizadas em tempo real sobre produtos, clientes e suporte."
+            },
+            {
+                question: "como funciona sua ia",
+                answer: "Minha IA utiliza processamento de linguagem natural para entender perguntas e algoritmos de machine learning para melhorar minhas respostas com o tempo, baseando-se no banco de dados da empresa."
+            }
+        ];
+        
+        // Função para enviar mensagem
+        function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const message = userInput.value.trim();
+            
+            if (message === '') return;
+            
+            // Adicionar mensagem do usuário ao chat
+            addMessage(message, 'user');
+            
+            // Processar a mensagem e obter resposta
+            setTimeout(() => {
+                const response = getResponse(message);
+                addMessage(response, 'bot');
+            }, 1000);
+            
+            // Limpar o campo de entrada
+            userInput.value = '';
+        }
+        
+        // Função para adicionar mensagem ao chat
+        function addMessage(text, sender) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+            messageDiv.textContent = text;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Função para obter resposta baseada na pergunta
+        function getResponse(question) {
+            question = question.toLowerCase();
+            
+            // Verificar se há uma correspondência direta
+            for (const item of knowledgeBase) {
+                if (question.includes(item.question)) {
+                    return item.answer;
+                }
+            }
+            
+            // Respostas padrão para perguntas não encontradas
+            const defaultResponses = [
+                "Desculpe, não entendi. Pode reformular sua pergunta?",
+                "Interessante! Vou precisar consultar essa informação no banco de dados. Pode fazer outra pergunta enquanto isso?",
+                "Estou aprendendo ainda. No momento, consigo responder perguntas sobre nossos produtos e serviços.",
+                "Não tenho uma resposta para isso no momento. Que tal perguntar sobre nossos serviços?",
+                "Minha base de conhecimento ainda não cobre essa pergunta. Entre em contato com nossa equipe para mais detalhes."
+            ];
+            
+            return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+        }
+        
+        // Função para enviar mensagem ao pressionar Enter
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        // Adicionar mensagem inicial após um breve delay
+        setTimeout(() => {
+            addMessage("Posso responder perguntas sobre a Netunna Software, nossos serviços e como podemos ajudar seu negócio!", 'bot');
+        }, 2000);
+    </script>
+</body>
+</html>
