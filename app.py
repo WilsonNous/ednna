@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ednna Chatbot - Netunna Software
-Backend Flask com MySQL + Groq (Llama 3) como fallback
+Backend Flask com MySQL + OpenAI (gpt-3.5-turbo) como fallback
 """
 
 from flask import Flask, request, jsonify, render_template
@@ -10,7 +10,7 @@ from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 import logging
-import requests
+from openai import OpenAI
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -32,9 +32,8 @@ DB_CONFIG = {
     "collation": 'utf8mb4_unicode_ci'
 }
 
-# Configuração do Groq (Llama 3)
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+# Inicializar cliente OpenAI
+openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 def get_db_connection():
     """Estabelece conexão com o banco de dados"""
@@ -130,8 +129,8 @@ def get_chat_response(message, user_id):
                 'confidence': 0.9
             }
         else:
-            # Fallback para Groq (Llama 3)
-            ai_response = call_groq_fallback(message)
+            # Fallback para OpenAI
+            ai_response = call_openai_fallback(message)
             log_message(conversation_id, ai_response, False, connection)
             return {
                 'response': ai_response,
@@ -147,18 +146,9 @@ def get_chat_response(message, user_id):
             cursor.close()
             connection.close()
 
-def call_groq_fallback(message: str) -> str:
-    """Chama a Groq (Llama 3) como fallback quando não encontra resposta no banco"""
-    if not GROQ_API_KEY:
-        logger.error("GROQ_API_KEY não configurada")
-        return "Desculpe, o assistente está em manutenção."
-
+def call_openai_fallback(message: str) -> str:
+    """Chama a OpenAI como fallback quando não encontra resposta no banco"""
     try:
-        headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
         system_prompt = """
         Você é Ednna, assistente virtual da Netunna Software.
         Responda de forma clara, objetiva e amigável.
@@ -166,28 +156,22 @@ def call_groq_fallback(message: str) -> str:
         Mantenha respostas curtas (máx. 2 frases).
         """
 
-        data = {
-            "model": "llama3-8b-8192",
-            "messages": [
+        completion = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": message}
             ],
-            "max_tokens": 150,
-            "temperature": 0.7
-        }
+            max_tokens=150,
+            temperature=0.7,
+            timeout=10
+        )
 
-        response = requests.post(GROQ_URL, headers=headers, json=data, timeout=10)
-        
-        if response.status_code == 200:
-            result = response.json()
-            return result["choices"][0]["message"]["content"].strip()
-        else:
-            logger.error(f"Erro Groq: {response.status_code} - {response.text}")
-            return "Desculpe, não consegui processar sua pergunta agora."
+        return completion.choices[0].message.content.strip()
 
     except Exception as e:
-        logger.error(f"Erro ao chamar Groq: {e}")
-        return "Desculpe, tive um problema técnico. Tente novamente."
+        logger.error(f"Erro ao chamar OpenAI: {e}")
+        return "Desculpe, não consegui processar sua pergunta agora. Tente novamente mais tarde."
 
 def get_or_create_conversation(user_id, connection):
     """Obtém ou cria uma nova conversa para o usuário"""
