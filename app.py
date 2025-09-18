@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ednna Chatbot - Netunna Software
-Backend Flask com MySQL + OpenAI (gpt-3.5-turbo) como fallback
+Backend Flask com MySQL — SEM OpenAI
 """
 
 from flask import Flask, request, jsonify, render_template
@@ -10,7 +10,6 @@ from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 import logging
-from openai import OpenAI
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -31,9 +30,6 @@ DB_CONFIG = {
     "charset": 'utf8mb4',
     "collation": 'utf8mb4_unicode_ci'
 }
-
-# Inicializar cliente OpenAI
-openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 def get_db_connection():
     """Estabelece conexão com o banco de dados"""
@@ -96,7 +92,7 @@ def chat():
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
 def get_chat_response(message, user_id):
-    """Processa a mensagem e retorna uma resposta"""
+    """Processa a mensagem e retorna uma resposta do banco de dados"""
     connection = get_db_connection()
     if not connection:
         return {'response': 'Erro de conexão com o banco de dados', 'intent': 'error'}
@@ -129,13 +125,13 @@ def get_chat_response(message, user_id):
                 'confidence': 0.9
             }
         else:
-            # Fallback para OpenAI
-            ai_response = call_openai_fallback(message)
-            log_message(conversation_id, ai_response, False, connection)
+            # Resposta padrão se não encontrar
+            default_response = "Desculpe, ainda não sei responder isso. Pergunte sobre nossos serviços ou produtos!"
+            log_message(conversation_id, default_response, False, connection)
             return {
-                'response': ai_response,
-                'intent': 'ai_generated',
-                'confidence': 0.7
+                'response': default_response,
+                'intent': 'unknown',
+                'confidence': 0.1
             }
             
     except Error as e:
@@ -145,33 +141,6 @@ def get_chat_response(message, user_id):
         if connection and connection.is_connected():
             cursor.close()
             connection.close()
-
-def call_openai_fallback(message: str) -> str:
-    """Chama a OpenAI como fallback quando não encontra resposta no banco"""
-    try:
-        system_prompt = """
-        Você é Ednna, assistente virtual da Netunna Software.
-        Responda de forma clara, objetiva e amigável.
-        Se não souber a resposta, diga que vai encaminhar para um humano.
-        Mantenha respostas curtas (máx. 2 frases).
-        """
-
-        completion = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message}
-            ],
-            max_tokens=150,
-            temperature=0.7,
-            timeout=10
-        )
-
-        return completion.choices[0].message.content.strip()
-
-    except Exception as e:
-        logger.error(f"Erro ao chamar OpenAI: {e}")
-        return "Desculpe, não consegui processar sua pergunta agora. Tente novamente mais tarde."
 
 def get_or_create_conversation(user_id, connection):
     """Obtém ou cria uma nova conversa para o usuário"""
