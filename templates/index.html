@@ -6,15 +6,17 @@
     <title>Ednna Chatbot - Netunna Software</title>
     <style>
         :root {
-            --primary: #2c3e50;
-            --secondary: #3498db;
-            --accent: #9b59b6;
-            --light: #ecf0f1;
-            --dark: #2c3e50;
-            --success: #2ecc71;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --dark-bg: #1a2431;
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #7f8c8d;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --text-color: #333;
+            --background-color: #f5f7fa;
+            --header-bg: #2c3e50;
+            --menu-bg: #34495e;
+            --menu-hover: #3498db;
+            --footer-bg: #2c3e50;
         }
         
         * {
@@ -25,74 +27,169 @@
         }
         
         body {
-            background: linear-gradient(135deg, var(--dark-bg) 0%, #2c3e50 100%);
-            color: var(--light);
+            background-color: var(--background-color);
+            color: var(--text-color);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
         
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            flex: 1;
-        }
-        
-        header {
-            background: rgba(0, 0, 0, 0.2);
+        .main-header {
+            background-color: var(--header-bg);
             color: white;
-            padding: 20px 0;
-            text-align: center;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .logo {
+            height: 50px;
+            width: auto;
+        }
+        
+        .main-header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .main-nav {
+            background-color: var(--menu-bg);
+            padding: 0 20px;
+        }
+        
+        .main-menu {
             display: flex;
-            align-items: center;
-            justify-content: center;
+            list-style: none;
+            justify-content: space-between;
+        }
+        
+        .menu-item {
+            position: relative;
+        }
+        
+        .menu-button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .menu-button:hover {
+            background-color: var(--menu-hover);
+        }
+        
+        .submenu {
+            display: none;
+            position: absolute;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            min-width: 200px;
+            z-index: 1000;
+            list-style: none;
+        }
+        
+        .menu-item:hover .submenu {
+            display: block;
+        }
+        
+        .submenu-button {
+            width: 100%;
+            text-align: left;
+            padding: 12px 15px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .submenu-button:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+        
+        .sidebar-title {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+        
+        .stats {
+            display: flex;
+            flex-direction: column;
             gap: 15px;
         }
         
-        .logo-icon {
-            font-size: 2.5rem;
-            color: var(--secondary);
+        .stat {
+            background-color: var(--light-color);
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
         }
         
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--secondary-color);
         }
         
-        .subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--accent-color);
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
         
         .chat-container {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+            background: white;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            max-width: 800px;
-            margin: 0 auto;
-            height: 70vh;
+            flex: 1;
         }
         
         .chat-header {
-            background: rgba(52, 152, 219, 0.2);
+            background: var(--secondary-color);
             color: white;
             padding: 15px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+        
+        .chat-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
         }
         
         .chat-messages {
@@ -102,55 +199,51 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            max-height: 500px;
         }
         
         .message {
             max-width: 80%;
             padding: 12px 15px;
-            border-radius: 18px;
+            border-radius: 8px;
             line-height: 1.4;
         }
         
         .bot-message {
-            background: rgba(52, 152, 219, 0.3);
+            background: var(--light-color);
             align-self: flex-start;
-            border-bottom-left-radius: 5px;
+            border-left: 4px solid var(--secondary-color);
         }
         
         .user-message {
-            background: rgba(155, 89, 182, 0.4);
+            background: var(--secondary-color);
+            color: white;
             align-self: flex-end;
-            border-bottom-right-radius: 5px;
+            border-right: 4px solid var(--primary-color);
         }
         
         .chat-input {
             display: flex;
             padding: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.1);
+            border-top: 1px solid #eee;
+            background: #f9f9f9;
         }
         
         .chat-input input {
             flex: 1;
             padding: 12px 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             outline: none;
             font-size: 16px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-        
-        .chat-input input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
         }
         
         .chat-input button {
-            background: var(--secondary);
+            background: var(--secondary-color);
             color: white;
             border: none;
             padding: 12px 20px;
-            border-radius: 20px;
+            border-radius: 4px;
             margin-left: 10px;
             cursor: pointer;
             font-weight: 600;
@@ -158,54 +251,70 @@
         }
         
         .chat-input button:hover {
-            background: var(--accent);
+            background: var(--primary-color);
         }
         
-        .typing-indicator {
-            display: none;
-            padding: 10px 15px;
-            background: rgba(52, 152, 219, 0.3);
-            border-radius: 18px;
-            align-self: flex-start;
-            margin-bottom: 10px;
+        .info-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
-        .typing-indicator span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background-color: white;
+        .info-title {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-icon {
+            background: var(--light-color);
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            margin: 0 2px;
-            animation: typing 1.4s infinite both;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-color);
         }
         
-        .typing-indicator span:nth-child(2) {
-            animation-delay: 0.2s;
+        .feature-text h3 {
+            margin-bottom: 5px;
+            color: var(--dark-color);
         }
         
-        .typing-indicator span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-        
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-5px); }
+        .feature-text p {
+            color: var(--accent-color);
+            font-size: 0.9rem;
         }
         
         footer {
             text-align: center;
             padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--footer-bg);
             color: white;
-            border-radius: 10px;
-            margin-top: 30px;
-            backdrop-filter: blur(10px);
         }
         
         @media (max-width: 768px) {
-            .chat-container {
-                height: 80vh;
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+            
+            .main-menu {
+                flex-direction: column;
             }
             
             .message {
@@ -215,58 +324,152 @@
     </style>
 </head>
 <body>
+    <header class="main-header">
+        <img src="assets/Netunna_Cinza_Assinada.png" alt="Netunna Logo" class="logo" onerror="this.alt='Netunna Logo'">
+        <h1>EDNNA CHATBOT - NETUNNA SOFTWARE</h1>
+    </header>
+
+    <nav class="main-nav">
+        <ul class="main-menu">
+            <li class="menu-item">
+                <button class="menu-button">Chatbot</button>
+                <ul class="submenu">
+                    <li><button class="submenu-button" data-target="conversations">Histórico de Conversas</button></li>
+                    <li><button class="submenu-button" data-target="knowledge">Base de Conhecimento</button></li>
+                    <li><button class="submenu-button" data-target="analytics">Análises</button></li>
+                </ul>
+            </li>
+            <li class="menu-item">
+                <button class="menu-button">Configurações</button>
+                <ul class="submenu">
+                    <li><button class="submenu-button" data-target="settings">Configurações do Chatbot</button></li>
+                    <li><button class="submenu-button" data-target="integration">Integrações</button></li>
+                    <li><button class="submenu-button" data-target="users">Usuários</button></li>
+                </ul>
+            </li>
+            <li class="menu-item">
+                <button class="menu-button">Relatórios</button>
+                <ul class="submenu">
+                    <li><button class="submenu-button" data-target="usage">Uso do Chatbot</button></li>
+                    <li><button class="submenu-button" data-target="satisfaction">Satisfação do Usuário</button></li>
+                    <li><button class="submenu-button" data-target="performance">Desempenho</button></li>
+                </ul>
+            </li>
+            <li class="menu-item">
+                <button id="logout-button" class="menu-button">Sair</button>
+            </li>
+        </ul>
+    </nav>
+
     <div class="container">
-        <header>
-            <div class="logo">
-                <div class="logo-icon">🤖</div>
-                <div>
-                    <h1>Ednna Chatbot</h1>
-                    <p class="subtitle">Solução inteligente da Netunna Software</p>
+        <div class="sidebar">
+            <h2 class="sidebar-title">Estatísticas do Chatbot</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">95%</div>
+                    <div class="stat-label">Taxa de Acerto</div>
                 </div>
-            </div>
-        </header>
-        
-        <div class="chat-container">
-            <div class="chat-header">
-                <div class="logo-icon">💬</div>
-                <div>
-                    <h2>Ednna Assistant</h2>
-                    <p>Conectado ao banco de dados MySQL</p>
+                <div class="stat">
+                    <div class="stat-number">1.2s</div>
+                    <div class="stat-label">Tempo de Resposta</div>
                 </div>
-            </div>
-            
-            <div class="chat-messages" id="chat-messages">
-                <div class="message bot-message">
-                    Olá! Eu sou a Ednna, assistente virtual da Netunna Software.
+                <div class="stat">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Disponibilidade</div>
                 </div>
-                <div class="message bot-message">
-                    Estou integrada com o banco de dados MySQL e posso responder perguntas sobre nossos produtos, serviços e muito mais.
+                <div class="stat">
+                    <div class="stat-number">1,243</div>
+                    <div class="stat-label">Conversas Hoje</div>
                 </div>
-            </div>
-            
-            <div class="typing-indicator" id="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-            
-            <div class="chat-input">
-                <input type="text" id="user-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
-                <button onclick="sendMessage()">Enviar</button>
             </div>
         </div>
         
-        <footer>
-            <p>Netunna Software &copy; 2025 - Desenvolvendo soluções inteligentes para seu negócio</p>
-            <p>Backend: Python + Flask + MySQL | Deploy: Render</p>
-        </footer>
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <img src="assets/ednna-avatar.png" alt="Ednna" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiMzNDk4REIiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiM3RjhDOEQiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
+                    <div>
+                        <h2>Ednna Assistant</h2>
+                        <p>Conectado ao banco de dados MySQL</p>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message bot-message">
+                        Olá! Eu sou a Ednna, assistente virtual da Netunna Software.
+                    </div>
+                    <div class="message bot-message">
+                        Estou integrada com o banco de dados e posso responder perguntas sobre nossos produtos, serviços e muito mais.
+                    </div>
+                </div>
+                
+                <div class="chat-input">
+                    <input type="text" id="user-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()">Enviar</button>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h2 class="info-title">Recursos da Ednna</h2>
+                
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-text">
+                        <h3>Integração com Banco de Dados</h3>
+                        <p>Acesso em tempo real às informações da empresa</p>
+                    </div>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-text">
+                        <h3>Inteligência Artificial</h3>
+                        <p>Algoritmos de ML para respostas inteligentes</p>
+                    </div>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-text">
+                        <h3>Busca Contextual</h3>
+                        <p>Encontre informações com base no contexto da conversa</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <footer>
+        <p>Netunna Software @ 2024</p>
+    </footer>
+
     <script>
-        const userId = Math.floor(Math.random() * 1000) + 1; // ID aleatório para demo
+        // Simulação de banco de dados com perguntas e respostas
+        const knowledgeBase = [
+            {
+                question: "quem é você",
+                answer: "Eu sou a Ednna, assistente virtual inteligente da Netunna Software. Fui desenvolvida para ajudar com informações sobre produtos, serviços e suporte técnico."
+            },
+            {
+                question: "o que é a netunna software",
+                answer: "A Netunna Software é uma empresa especializada em desenvolvimento de soluções inteligentes, incluindo sistemas de gestão, aplicativos personalizados e integração com IA."
+            },
+            {
+                question: "quais serviços vocês oferecem",
+                answer: "Oferecemos: desenvolvimento de software personalizado, integração de sistemas, chatbots inteligentes, análise de dados, consultoria em TI e soluções em nuvem."
+            },
+            {
+                question: "como posso entrar em contato",
+                answer: "Você pode entrar em contato conosco pelo telefone (11) 3456-7890, pelo email contato@netunna.com.br ou através do nosso site www.netunna.com.br"
+            },
+            {
+                question: "você tem integração com banco de dados",
+                answer: "Sim! Estou integrada com um banco de dados MySQL que me permite acessar informações atualizadas em tempo real sobre produtos, clientes e suporte."
+            }
+        ];
         
         // Função para enviar mensagem
-        async function sendMessage() {
+        function sendMessage() {
             const userInput = document.getElementById('user-input');
             const message = userInput.value.trim();
             
@@ -275,37 +478,14 @@
             // Adicionar mensagem do usuário ao chat
             addMessage(message, 'user');
             
-            // Mostrar indicador de digitação
-            showTypingIndicator();
+            // Processar a mensagem e obter resposta
+            setTimeout(() => {
+                const response = getResponse(message);
+                addMessage(response, 'bot');
+            }, 1000);
             
-            try {
-                // Enviar mensagem para o backend
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        user_id: userId
-                    })
-                });
-                
-                const data = await response.json();
-                
-                // Adicionar resposta do bot
-                addMessage(data.response, 'bot');
-                
-            } catch (error) {
-                console.error('Erro:', error);
-                addMessage('Desculpe, ocorreu um erro ao processar sua mensagem.', 'bot');
-            } finally {
-                // Esconder indicador de digitação
-                hideTypingIndicator();
-                
-                // Limpar o campo de entrada
-                userInput.value = '';
-            }
+            // Limpar o campo de entrada
+            userInput.value = '';
         }
         
         // Função para adicionar mensagem ao chat
@@ -320,15 +500,26 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
         
-        // Função para mostrar indicador de digitação
-        function showTypingIndicator() {
-            document.getElementById('typing-indicator').style.display = 'block';
-            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-        }
-        
-        // Função para esconder indicador de digitação
-        function hideTypingIndicator() {
-            document.getElementById('typing-indicator').style.display = 'none';
+        // Função para obter resposta baseada na pergunta
+        function getResponse(question) {
+            question = question.toLowerCase();
+            
+            // Verificar se há uma correspondência direta
+            for (const item of knowledgeBase) {
+                if (question.includes(item.question)) {
+                    return item.answer;
+                }
+            }
+            
+            // Respostas padrão para perguntas não encontradas
+            const defaultResponses = [
+                "Desculpe, não entendi. Pode reformular sua pergunta?",
+                "Interessante! Vou precisar consultar essa informação no banco de dados. Pode fazer outra pergunta enquanto isso?",
+                "Estou aprendendo ainda. No momento, consigo responder perguntas sobre nossos produtos e serviços.",
+                "Não tenho uma resposta para isso no momento. Que tal perguntar sobre nossos serviços?"
+            ];
+            
+            return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
         }
         
         // Função para enviar mensagem ao pressionar Enter
@@ -342,6 +533,15 @@
         setTimeout(() => {
             addMessage("Posso responder perguntas sobre a Netunna Software, nossos serviços e como podemos ajudar seu negócio!", 'bot');
         }, 2000);
+        
+        // Configurar botão de logout
+        document.getElementById('logout-button').addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                alert('Sessão encerrada com sucesso!');
+                // Redirecionar para página de login
+                // window.location.href = 'login.html';
+            }
+        });
     </script>
 </body>
 </html>
