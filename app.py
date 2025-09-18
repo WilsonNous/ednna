@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ednna Chatbot - Netunna Software
-Backend Flask com MySQL
+Backend Flask com MySQL + Groq (Llama 3) como fallback
 """
 
 from flask import Flask, request, jsonify, render_template
@@ -10,6 +10,7 @@ from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 import logging
+import requests
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -23,13 +24,17 @@ app = Flask(__name__)
 # Configuração do banco de dados
 DB_CONFIG = {
     "host": os.getenv('DB_HOST', 'localhost'),
-    "user": os.getenv('DB_USER', 'noust785_edi_admin'),
-    "password": os.getenv('DB_PASSWORD', 'N3tunn@21#'),
-    "database": os.getenv('DB_NAME', 'noust785_edi_ops'),
+    "user": os.getenv('DB_USER', 'seu_usuario'),
+    "password": os.getenv('DB_PASSWORD', ''),
+    "database": os.getenv('DB_NAME', 'seu_banco'),
     "port": int(os.getenv('DB_PORT', 3306)),
     "charset": 'utf8mb4',
     "collation": 'utf8mb4_unicode_ci'
 }
+
+# Configuração do Groq (Llama 3)
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 def get_db_connection():
     """Estabelece conexão com o banco de dados"""
@@ -77,7 +82,7 @@ def chat():
             return jsonify({'error': 'Dados JSON inválidos'}), 400
             
         user_message = data.get('message', '').strip()
-        user_id = data.get('user_id', 1)  # ID default para usuários não logados
+        user_id = data.get('user_id', 1)
         
         if not user_message:
             return jsonify({'error': 'Mensagem vazia'}), 400
@@ -119,21 +124,19 @@ def get_chat_response(message, user_id):
         if result:
             # Registrar a resposta do bot
             log_message(conversation_id, result['answer'], False, connection)
-            
             return {
                 'response': result['answer'],
                 'intent': result['category'],
                 'confidence': 0.9
             }
         else:
-            # Resposta padrão se não encontrar correspondência
-            default_response = "Desculpe, não entendi. Pode reformular sua pergunta?"
-            log_message(conversation_id, default_response, False, connection)
-            
+            # Fallback para Groq (Llama 3)
+            ai_response = call_groq_fallback(message)
+            log_message(conversation_id, ai_response, False, connection)
             return {
-                'response': default_response,
-                'intent': 'unknown',
-                'confidence': 0.1
+                'response': ai_response,
+                'intent': 'ai_generated',
+                'confidence': 0.7
             }
             
     except Error as e:
@@ -144,12 +147,52 @@ def get_chat_response(message, user_id):
             cursor.close()
             connection.close()
 
+def call_groq_fallback(message: str) -> str:
+    """Chama a Groq (Llama 3) como fallback quando não encontra resposta no banco"""
+    if not GROQ_API_KEY:
+        logger.error("GROQ_API_KEY não configurada")
+        return "Desculpe, o assistente está em manutenção."
+
+    try:
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        system_prompt = """
+        Você é Ednna, assistente virtual da Netunna Software.
+        Responda de forma clara, objetiva e amigável.
+        Se não souber a resposta, diga que vai encaminhar para um humano.
+        Mantenha respostas curtas (máx. 2 frases).
+        """
+
+        data = {
+            "model": "llama3-8b-8192",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message}
+            ],
+            "max_tokens": 150,
+            "temperature": 0.7
+        }
+
+        response = requests.post(GROQ_URL, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result["choices"][0]["message"]["content"].strip()
+        else:
+            logger.error(f"Erro Groq: {response.status_code} - {response.text}")
+            return "Desculpe, não consegui processar sua pergunta agora."
+
+    except Exception as e:
+        logger.error(f"Erro ao chamar Groq: {e}")
+        return "Desculpe, tive um problema técnico. Tente novamente."
+
 def get_or_create_conversation(user_id, connection):
     """Obtém ou cria uma nova conversa para o usuário"""
     try:
         cursor = connection.cursor()
-        
-        # Verificar se há conversa ativa
         query = "SELECT id FROM conversations WHERE user_id = %s AND status = 'active' ORDER BY started_at DESC LIMIT 1"
         cursor.execute(query, (user_id,))
         result = cursor.fetchone()
@@ -157,7 +200,6 @@ def get_or_create_conversation(user_id, connection):
         if result:
             return result[0]
         else:
-            # Criar nova conversa
             query = "INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')"
             cursor.execute(query, (user_id,))
             connection.commit()
@@ -165,7 +207,7 @@ def get_or_create_conversation(user_id, connection):
             
     except Error as e:
         logger.error(f"Erro ao obter/criar conversa: {e}")
-        return 1  # Fallback para conversa padrão
+        return 1
 
 def log_message(conversation_id, message, is_from_user, connection):
     """Registra uma mensagem no banco de dados"""
@@ -179,41 +221,6 @@ def log_message(conversation_id, message, is_from_user, connection):
         connection.commit()
     except Error as e:
         logger.error(f"Erro ao registrar mensagem: {e}")
-
-@app.route('/api/conversations', methods=['GET'])
-def get_conversations():
-    """Endpoint para obter histórico de conversas"""
-    try:
-        user_id = request.args.get('user_id', 1)
-        limit = request.args.get('limit', 10)
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Erro de conexão com o banco de dados'}), 500
-        
-        cursor = connection.cursor(dictionary=True)
-        query = """
-        SELECT c.id, c.started_at, c.ended_at, c.status, 
-               COUNT(m.id) as message_count
-        FROM conversations c
-        LEFT JOIN messages m ON c.id = m.conversation_id
-        WHERE c.user_id = %s
-        GROUP BY c.id
-        ORDER BY c.started_at DESC
-        LIMIT %s
-        """
-        cursor.execute(query, (user_id, limit))
-        conversations = cursor.fetchall()
-        
-        return jsonify({'conversations': conversations})
-        
-    except Error as e:
-        logger.error(f"Erro ao obter conversas: {e}")
-        return jsonify({'error': 'Erro no banco de dados'}), 500
-    finally:
-        if connection and connection.is_connected():
-            cursor.close()
-            connection.close()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
