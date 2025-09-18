@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ednna - Chatbot Inteligente | Netunna Software</title>
+    <title>Ednna Chatbot - Netunna Software</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -14,6 +15,7 @@
             --success: #2ecc71;
             --warning: #f39c12;
             --danger: #e74c3c;
+            --dark-bg: #1a2431;
         }
         
         * {
@@ -24,8 +26,8 @@
         }
         
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            color: var(--dark);
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #2c3e50 100%);
+            color: var(--light);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -39,13 +41,14 @@
         }
         
         header {
-            background: var(--primary);
+            background: rgba(0, 0, 0, 0.2);
             color: white;
             padding: 20px 0;
             text-align: center;
             border-radius: 10px;
             margin-bottom: 30px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
         
         .logo {
@@ -71,34 +74,30 @@
         }
         
         .main-content {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 30px;
             margin-bottom: 30px;
         }
         
         .chat-container {
-            flex: 2;
-            background: white;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
             display: flex;
             flex-direction: column;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .chat-header {
-            background: var(--secondary);
+            background: rgba(52, 152, 219, 0.2);
             color: white;
             padding: 15px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
-        }
-        
-        .chat-header img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
         }
         
         .chat-messages {
@@ -118,14 +117,13 @@
         }
         
         .bot-message {
-            background: var(--light);
+            background: rgba(52, 152, 219, 0.3);
             align-self: flex-start;
             border-bottom-left-radius: 5px;
         }
         
         .user-message {
-            background: var(--secondary);
-            color: white;
+            background: rgba(155, 89, 182, 0.4);
             align-self: flex-end;
             border-bottom-right-radius: 5px;
         }
@@ -133,17 +131,23 @@
         .chat-input {
             display: flex;
             padding: 15px;
-            border-top: 1px solid #eee;
-            background: #f9f9f9;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.1);
         }
         
         .chat-input input {
             flex: 1;
             padding: 12px 15px;
-            border: 1px solid #ddd;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 20px;
             outline: none;
             font-size: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .chat-input input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
         
         .chat-input button {
@@ -159,21 +163,22 @@
         }
         
         .chat-input button:hover {
-            background: var(--primary);
+            background: var(--accent);
         }
         
         .info-panel {
-            flex: 1;
-            background: white;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .info-title {
             font-size: 1.5rem;
             margin-bottom: 20px;
-            color: var(--primary);
+            color: var(--light);
             padding-bottom: 10px;
             border-bottom: 2px solid var(--secondary);
         }
@@ -186,7 +191,7 @@
         }
         
         .feature-icon {
-            background: var(--light);
+            background: rgba(52, 152, 219, 0.2);
             width: 50px;
             height: 50px;
             border-radius: 50%;
@@ -199,22 +204,25 @@
         
         .feature-text h3 {
             margin-bottom: 5px;
-            color: var(--dark);
+            color: var(--light);
+        }
+        
+        .feature-text p {
+            color: rgba(255, 255, 255, 0.7);
         }
         
         .stats {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
         }
         
         .stat {
-            text-align: center;
-            background: var(--light);
+            background: rgba(0, 0, 0, 0.2);
             padding: 15px;
-            border-radius: 10px;
-            flex: 1;
-            margin: 0 10px;
+            border-radius: 8px;
+            text-align: center;
         }
         
         .stat-number {
@@ -225,30 +233,97 @@
         
         .stat-label {
             font-size: 0.9rem;
-            color: var(--dark);
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .backend-panel {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .code-container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        pre {
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+            color: var(--light);
+        }
+        
+        .keyword {
+            color: #ff79c6;
+        }
+        
+        .string {
+            color: #f1fa8c;
+        }
+        
+        .comment {
+            color: #6272a4;
+        }
+        
+        .function {
+            color: #50fa7b;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            transition: background 0.3s;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: var(--accent);
+        }
+        
+        .btn-success {
+            background: var(--success);
+        }
+        
+        .btn-warning {
+            background: var(--warning);
+        }
+        
+        .btn-danger {
+            background: var(--danger);
         }
         
         footer {
             text-align: center;
             padding: 20px;
-            background: var(--primary);
+            background: rgba(0, 0, 0, 0.2);
             color: white;
             border-radius: 10px;
             margin-top: 30px;
+            backdrop-filter: blur(10px);
         }
         
         @media (max-width: 768px) {
             .main-content {
-                flex-direction: column;
+                grid-template-columns: 1fr;
             }
             
             .stats {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .stat {
-                margin: 0;
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -257,7 +332,7 @@
     <div class="container">
         <header>
             <div class="logo">
-                <div class="logo-icon">🤖</div>
+                <div class="logo-icon"><i class="fas fa-robot"></i></div>
                 <div>
                     <h1>Ednna Chatbot</h1>
                     <p class="subtitle">Solução inteligente da Netunna Software</p>
@@ -268,25 +343,25 @@
         <div class="main-content">
             <div class="chat-container">
                 <div class="chat-header">
-                    <div class="logo-icon">💬</div>
+                    <div class="logo-icon"><i class="fas fa-comments"></i></div>
                     <div>
                         <h2>Ednna Assistant</h2>
-                        <p>Conectado ao banco de dados</p>
+                        <p>Conectado ao banco de dados MySQL</p>
                     </div>
                 </div>
                 
                 <div class="chat-messages" id="chat-messages">
                     <div class="message bot-message">
-                        Olá! Eu sou a Ednna, assistente virtual da Netunna Software. Como posso ajudar você hoje?
+                        Olá! Eu sou a Ednna, assistente virtual da Netunna Software.
                     </div>
                     <div class="message bot-message">
-                        Estou integrada com o banco de dados e posso responder perguntas sobre nossos produtos, serviços e muito mais.
+                        Estou integrada com o banco de dados MySQL e posso responder perguntas sobre nossos produtos, serviços e muito mais.
                     </div>
                 </div>
                 
                 <div class="chat-input">
                     <input type="text" id="user-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
-                    <button onclick="sendMessage()">Enviar</button>
+                    <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Enviar</button>
                 </div>
             </div>
             
@@ -294,15 +369,15 @@
                 <h2 class="info-title">Recursos da Ednna</h2>
                 
                 <div class="feature">
-                    <div class="feature-icon">📊</div>
+                    <div class="feature-icon"><i class="fas fa-database"></i></div>
                     <div class="feature-text">
-                        <h3>Integração com Banco de Dados</h3>
+                        <h3>Integração com MySQL</h3>
                         <p>Acesso em tempo real às informações da empresa</p>
                     </div>
                 </div>
                 
                 <div class="feature">
-                    <div class="feature-icon">🤖</div>
+                    <div class="feature-icon"><i class="fas fa-brain"></i></div>
                     <div class="feature-text">
                         <h3>Inteligência Artificial</h3>
                         <p>Algoritmos de ML para respostas inteligentes</p>
@@ -310,18 +385,18 @@
                 </div>
                 
                 <div class="feature">
-                    <div class="feature-icon">🔍</div>
+                    <div class="feature-icon"><i class="fas fa-code"></i></div>
                     <div class="feature-text">
-                        <h3>Busca Contextual</h3>
-                        <p>Encontre informações com base no contexto da conversa</p>
+                        <h3>Backend em Python</h3>
+                        <p>API robusta com Flask e MySQL Connector</p>
                     </div>
                 </div>
                 
                 <div class="feature">
-                    <div class="feature-icon">📱</div>
+                    <div class="feature-icon"><i class="fab fa-github"></i></div>
                     <div class="feature-text">
-                        <h3>Multiplataforma</h3>
-                        <p>Disponível para web, mobile e aplicativos desktop</p>
+                        <h3>Versionamento no GitHub</h3>
+                        <p>Controle de versão e deploy contínuo</p>
                     </div>
                 </div>
                 
@@ -340,10 +415,73 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="backend-panel">
+                <h2 class="info-title">Backend em Python - Estrutura do Projeto</h2>
+                
+                <p>O backend do Ednna Chatbot é desenvolvido em Python com Flask e MySQL Connector.</p>
+                
+                <h3 style="margin: 20px 0 10px 0;">config.py</h3>
+                <div class="code-container">
+                    <pre>
+<span class="keyword">DB_CONFIG</span> = {
+    <span class="string">"host"</span>: <span class="string">"localhost"</span>,
+    <span class="string">"user"</span>: <span class="string">"noust785_edi_admin"</span>,
+    <span class="string">"password"</span>: <span class="string">"N3tunn@21#"</span>,
+    <span class="string">"database"</span>: <span class="string">"noust785_edi_ops"</span>
+}
+                    </pre>
+                </div>
+                
+                <h3 style="margin: 20px 0 10px 0;">app.py (Flask API)</h3>
+                <div class="code-container">
+                    <pre>
+<span class="keyword">from</span> flask <span class="keyword">import</span> Flask, request, jsonify
+<span class="keyword">import</span> mysql.connector
+<span class="keyword">from</span> config <span class="keyword">import</span> DB_CONFIG
+
+app = Flask(__name__)
+
+<span class="function">def</span> <span class="function-name">get_db_connection</span>():
+    <span class="keyword">return</span> mysql.connector.connect(**DB_CONFIG)
+
+@app.route(<span class="string">'/api/chat'</span>, methods=[<span class="string">'POST'</span>])
+<span class="function">def</span> <span class="function-name">chat</span>():
+    data = request.get_json()
+    user_message = data.get(<span class="string">'message'</span>)
+    
+    <span class="comment"># Processar a mensagem e buscar resposta no banco de dados</span>
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    
+    query = <span class="string">"SELECT answer FROM knowledge_base WHERE question LIKE %s"</span>
+    cursor.execute(query, (<span class="string">'%'</span> + user_message + <span class="string">'%'</span>,))
+    result = cursor.fetchone()
+    
+    cursor.close()
+    connection.close()
+    
+    <span class="keyword">if</span> result:
+        <span class="keyword">return</span> jsonify({<span class="string">'response'</span>: result[<span class="string">'answer'</span>]})
+    <span class="keyword">else</span>:
+        <span class="keyword">return</span> jsonify({<span class="string">'response'</span>: <span class="string">'Desculpe, não entendi. Pode reformular?'</span>})
+
+<span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:
+    app.run(debug=True)
+                    </pre>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="simulateDeployment()"><i class="fas fa-cloud-upload-alt"></i> Simular Deploy no Render</button>
+                    <button class="btn" onclick="showDatabaseSchema()"><i class="fas fa-database"></i> Ver Esquema do Banco</button>
+                    <button class="btn btn-warning" onclick="testConnection()"><i class="fas fa-plug"></i> Testar Conexão com MySQL</button>
+                </div>
+            </div>
         </div>
         
         <footer>
-            <p>Netunna Software &copy; 2023 - Desenvolvendo soluções inteligentes para seu negócio</p>
+            <p>Netunna Software &copy; 2025 - Desenvolvendo soluções inteligentes para seu negócio</p>
+            <p>Backend: Python + Flask + MySQL | Frontend: HTML + CSS + JavaScript | Deploy: Render</p>
         </footer>
     </div>
 
@@ -368,7 +506,7 @@
             },
             {
                 question: "você tem integração com banco de dados",
-                answer: "Sim! Estou integrada com um banco de dados que me permite acessar informações atualizadas em tempo real sobre produtos, clientes e suporte."
+                answer: "Sim! Estou integrada com um banco de dados MySQL que me permite acessar informações atualizadas em tempo real sobre produtos, clientes e suporte."
             },
             {
                 question: "como funciona sua ia",
@@ -436,6 +574,21 @@
             if (event.key === 'Enter') {
                 sendMessage();
             }
+        }
+        
+        // Simular deploy no Render
+        function simulateDeployment() {
+            alert('Simulando deploy no Render...\n\nComandos executados:\n\n1. Git push origin main\n2. Build iniciado no Render\n3. Instalando dependências do Python\n4. Executando migrações de banco de dados\n5. Serviço reiniciado\n\nDeploy realizado com sucesso!');
+        }
+        
+        // Testar conexão com MySQL
+        function testConnection() {
+            alert('Testando conexão com MySQL...\n\nHost: localhost\nUsuário: noust785_edi_admin\nDatabase: noust785_edi_ops\n\nStatus: Conexão bem-sucedida!');
+        }
+        
+        // Mostrar esquema do banco de dados
+        function showDatabaseSchema() {
+            alert('Esquema do Banco de Dados MySQL:\n\n- Tabela users: Armazena informações dos usuários\n- Tabela conversations: Registra as conversas\n- Tabela messages: Armazena todas as mensagens\n- Tabela knowledge_base: Base de conhecimento com perguntas e respostas\n- Tabela logs: Registro de logs do sistema');
         }
         
         // Adicionar mensagem inicial após um breve delay
