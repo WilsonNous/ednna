@@ -1,10 +1,19 @@
+#!/usr/bin/env python3
+"""
+Ednna Chatbot - Netunna Software
+Backend Flask com MySQL
+"""
+
 from flask import Flask, request, jsonify, render_template
 import mysql.connector
 from mysql.connector import Error
 import os
 from dotenv import load_dotenv
-import json
-from datetime import datetime
+import logging
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -17,16 +26,19 @@ DB_CONFIG = {
     "user": os.getenv('DB_USER', 'noust785_edi_admin'),
     "password": os.getenv('DB_PASSWORD', 'N3tunn@21#'),
     "database": os.getenv('DB_NAME', 'noust785_edi_ops'),
-    "port": os.getenv('DB_PORT', 3306)
+    "port": int(os.getenv('DB_PORT', 3306)),
+    "charset": 'utf8mb4',
+    "collation": 'utf8mb4_unicode_ci'
 }
 
 def get_db_connection():
     """Estabelece conexão com o banco de dados"""
     try:
         connection = mysql.connector.connect(**DB_CONFIG)
+        logger.info("Conexão com MySQL estabelecida com sucesso")
         return connection
     except Error as e:
-        print(f"Erro ao conectar ao MySQL: {e}")
+        logger.error(f"Erro ao conectar ao MySQL: {e}")
         return None
 
 @app.route('/')
@@ -34,11 +46,36 @@ def index():
     """Página principal do chatbot"""
     return render_template('index.html')
 
+@app.route('/api/health')
+def health_check():
+    """Endpoint para verificar saúde da aplicação"""
+    try:
+        conn = get_db_connection()
+        if conn and conn.is_connected():
+            conn.close()
+            return jsonify({
+                'status': 'healthy',
+                'database': 'connected'
+            }), 200
+        else:
+            return jsonify({
+                'status': 'degraded',
+                'database': 'disconnected'
+            }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """Endpoint para processar mensagens do chat"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Dados JSON inválidos'}), 400
+            
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 1)  # ID default para usuários não logados
         
@@ -51,7 +88,8 @@ def chat():
         return jsonify(response)
     
     except Exception as e:
-        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
+        logger.error(f"Erro no endpoint /api/chat: {e}")
+        return jsonify({'error': 'Erro interno do servidor'}), 500
 
 def get_chat_response(message, user_id):
     """Processa a mensagem e retorna uma resposta"""
@@ -99,10 +137,10 @@ def get_chat_response(message, user_id):
             }
             
     except Error as e:
-        print(f"Erro no banco de dados: {e}")
+        logger.error(f"Erro no banco de dados: {e}")
         return {'response': 'Erro ao processar sua mensagem', 'intent': 'error'}
     finally:
-        if connection.is_connected():
+        if connection and connection.is_connected():
             cursor.close()
             connection.close()
 
@@ -126,7 +164,7 @@ def get_or_create_conversation(user_id, connection):
             return cursor.lastrowid
             
     except Error as e:
-        print(f"Erro ao obter/criar conversa: {e}")
+        logger.error(f"Erro ao obter/criar conversa: {e}")
         return 1  # Fallback para conversa padrão
 
 def log_message(conversation_id, message, is_from_user, connection):
@@ -140,7 +178,7 @@ def log_message(conversation_id, message, is_from_user, connection):
         cursor.execute(query, (conversation_id, message, is_from_user))
         connection.commit()
     except Error as e:
-        print(f"Erro ao registrar mensagem: {e}")
+        logger.error(f"Erro ao registrar mensagem: {e}")
 
 @app.route('/api/conversations', methods=['GET'])
 def get_conversations():
@@ -170,34 +208,8 @@ def get_conversations():
         return jsonify({'conversations': conversations})
         
     except Error as e:
-        return jsonify({'error': f'Erro no banco de dados: {str(e)}'}), 500
-    finally:
-        if connection and connection.is_connected():
-            cursor.close()
-            connection.close()
-
-@app.route('/api/conversation/<int:conversation_id>', methods=['GET'])
-def get_conversation(conversation_id):
-    """Endpoint para obter mensagens de uma conversa específica"""
-    try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Erro de conexão com o banco de dados'}), 500
-        
-        cursor = connection.cursor(dictionary=True)
-        query = """
-        SELECT m.message_text, m.is_from_user, m.sent_at, m.intent
-        FROM messages m
-        WHERE m.conversation_id = %s
-        ORDER BY m.sent_at ASC
-        """
-        cursor.execute(query, (conversation_id,))
-        messages = cursor.fetchall()
-        
-        return jsonify({'messages': messages})
-        
-    except Error as e:
-        return jsonify({'error': f'Erro no banco de dados: {str(e)}'}), 500
+        logger.error(f"Erro ao obter conversas: {e}")
+        return jsonify({'error': 'Erro no banco de dados'}), 500
     finally:
         if connection and connection.is_connected():
             cursor.close()
@@ -205,4 +217,5 @@ def get_conversation(conversation_id):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    logger.info(f"Iniciando servidor na porta {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
