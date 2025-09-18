@@ -6,98 +6,117 @@
     <title>Ednna Chatbot - Netunna Software</title>
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --accent-color: #7f8c8d;
-            --light-color: #ecf0f1;
-            --dark-color: #2c3e50;
-            --text-color: #333;
-            --background-color: #f5f7fa;
-            --header-bg: #2c3e50;
-            --menu-bg: #34495e;
-            --menu-hover: #3498db;
-            --footer-bg: #2c3e50;
+            --primary-gray: #2d3748;
+            --secondary-gray: #4a5568;
+            --light-gray: #f7fafc;
+            --border-gray: #e2e8f0;
+            --text-gray: #2d3748;
+            --orange: #f97316;
+            --orange-light: #fb923c;
+            --orange-hover: #ea580c;
+            --white: #ffffff;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
-            background-color: var(--background-color);
-            color: var(--text-color);
+            background-color: var(--light-gray);
+            color: var(--text-gray);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
-        
+
         .main-header {
-            background-color: var(--header-bg);
-            color: white;
+            background-color: var(--primary-gray);
+            color: var(--white);
             padding: 15px 20px;
             display: flex;
             align-items: center;
             gap: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow);
         }
-        
+
         .logo {
             height: 50px;
             width: auto;
+            filter: brightness(0) invert(1); /* Deixa branco se for colorido */
         }
-        
+
         .main-header h1 {
             font-size: 1.8rem;
             font-weight: 600;
+            letter-spacing: -0.5px;
         }
-        
+
         .main-nav {
-            background-color: var(--menu-bg);
+            background-color: var(--secondary-gray);
             padding: 0 20px;
         }
-        
+
         .main-menu {
             display: flex;
             list-style: none;
             justify-content: space-between;
+            align-items: center;
+            height: 50px;
         }
-        
+
         .menu-item {
             position: relative;
         }
-        
+
         .menu-button {
             background: none;
             border: none;
-            color: white;
+            color: var(--white);
             padding: 15px 20px;
             cursor: pointer;
             font-size: 1rem;
             transition: background-color 0.3s;
+            font-weight: 500;
         }
-        
+
         .menu-button:hover {
-            background-color: var(--menu-hover);
+            background-color: var(--orange);
         }
-        
+
+        #logout-button {
+            background: var(--orange);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        #logout-button:hover {
+            background: var(--orange-hover);
+        }
+
         .submenu {
             display: none;
             position: absolute;
-            background-color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border-radius: 4px;
+            background-color: var(--white);
+            box-shadow: var(--shadow-hover);
+            border-radius: 6px;
             min-width: 200px;
             z-index: 1000;
             list-style: none;
+            top: 100%;
+            left: 0;
         }
-        
+
         .menu-item:hover .submenu {
             display: block;
         }
-        
+
         .submenu-button {
             width: 100%;
             text-align: left;
@@ -106,92 +125,110 @@
             background: none;
             cursor: pointer;
             transition: background-color 0.2s;
+            color: var(--text-gray);
+            font-weight: 500;
         }
-        
+
         .submenu-button:hover {
-            background-color: #f0f0f0;
+            background-color: var(--light-gray);
+            color: var(--orange);
         }
-        
+
         .container {
             display: flex;
             flex: 1;
             padding: 20px;
             gap: 20px;
         }
-        
+
         .sidebar {
             width: 250px;
-            background-color: white;
+            background-color: var(--white);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow);
             padding: 20px;
         }
-        
+
         .sidebar-title {
             font-size: 1.2rem;
             margin-bottom: 20px;
-            color: var(--primary-color);
+            color: var(--primary-gray);
             padding-bottom: 10px;
-            border-bottom: 2px solid var(--secondary-color);
+            border-bottom: 2px solid var(--orange);
+            font-weight: 600;
         }
-        
+
         .stats {
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
-        
+
         .stat {
-            background-color: var(--light-color);
+            background-color: var(--light-gray);
             padding: 15px;
             border-radius: 6px;
             text-align: center;
+            border: 1px solid var(--border-gray);
         }
-        
+
         .stat-number {
             font-size: 1.8rem;
             font-weight: bold;
-            color: var(--secondary-color);
+            color: var(--orange);
         }
-        
+
         .stat-label {
             font-size: 0.9rem;
-            color: var(--accent-color);
+            color: var(--secondary-gray);
+            margin-top: 4px;
         }
-        
+
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-        
+
         .chat-container {
-            background: white;
+            background: var(--white);
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow);
             display: flex;
             flex-direction: column;
             flex: 1;
         }
-        
+
         .chat-header {
-            background: var(--secondary-color);
-            color: white;
+            background: var(--orange);
+            color: var(--white);
             padding: 15px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        
+
         .chat-header img {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            border: 2px solid white;
+            border: 2px solid var(--white);
+            background: var(--white);
+            padding: 2px;
         }
-        
+
+        .chat-header h2 {
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .chat-header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
         .chat-messages {
             padding: 20px;
             flex: 1;
@@ -200,132 +237,176 @@
             flex-direction: column;
             gap: 15px;
             max-height: 500px;
+            background-color: var(--light-gray);
         }
-        
+
         .message {
             max-width: 80%;
             padding: 12px 15px;
-            border-radius: 8px;
-            line-height: 1.4;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            position: relative;
+            animation: fadeIn 0.3s ease;
         }
-        
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .bot-message {
-            background: var(--light-color);
+            background: var(--white);
             align-self: flex-start;
-            border-left: 4px solid var(--secondary-color);
+            border: 1px solid var(--border-gray);
+            border-left: 4px solid var(--orange);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        
+
         .user-message {
-            background: var(--secondary-color);
-            color: white;
+            background: var(--orange);
+            color: var(--white);
             align-self: flex-end;
-            border-right: 4px solid var(--primary-color);
+            border-right: 4px solid var(--primary-gray);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        
+
         .chat-input {
             display: flex;
             padding: 15px;
-            border-top: 1px solid #eee;
-            background: #f9f9f9;
+            border-top: 1px solid var(--border-gray);
+            background: var(--white);
         }
-        
+
         .chat-input input {
             flex: 1;
             padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
             outline: none;
             font-size: 16px;
+            transition: border-color 0.3s;
         }
-        
+
+        .chat-input input:focus {
+            border-color: var(--orange);
+            box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+        }
+
         .chat-input button {
-            background: var(--secondary-color);
-            color: white;
+            background: var(--orange);
+            color: var(--white);
             border: none;
             padding: 12px 20px;
-            border-radius: 4px;
+            border-radius: 6px;
             margin-left: 10px;
             cursor: pointer;
             font-weight: 600;
-            transition: background 0.3s;
+            transition: background 0.3s, transform 0.1s;
+            min-width: 80px;
         }
-        
+
         .chat-input button:hover {
-            background: var(--primary-color);
+            background: var(--orange-hover);
         }
-        
+
+        .chat-input button:active {
+            transform: scale(0.98);
+        }
+
         .info-panel {
-            background: white;
+            background: var(--white);
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: var(--shadow);
         }
-        
+
         .info-title {
             font-size: 1.2rem;
             margin-bottom: 20px;
-            color: var(--primary-color);
+            color: var(--primary-gray);
             padding-bottom: 10px;
-            border-bottom: 2px solid var(--secondary-color);
+            border-bottom: 2px solid var(--orange);
+            font-weight: 600;
         }
-        
+
         .feature {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 15px;
             margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: var(--light-gray);
+            transition: transform 0.2s;
         }
-        
+
+        .feature:hover {
+            transform: translateY(-2px);
+            background: var(--white);
+            box-shadow: var(--shadow);
+        }
+
         .feature-icon {
-            background: var(--light-color);
+            background: var(--orange);
+            color: var(--white);
             width: 40px;
             height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--secondary-color);
+            font-weight: bold;
+            flex-shrink: 0;
         }
-        
+
         .feature-text h3 {
             margin-bottom: 5px;
-            color: var(--dark-color);
+            color: var(--primary-gray);
+            font-weight: 600;
         }
-        
+
         .feature-text p {
-            color: var(--accent-color);
+            color: var(--secondary-gray);
             font-size: 0.9rem;
+            line-height: 1.4;
         }
-        
+
         footer {
             text-align: center;
             padding: 20px;
-            background: var(--footer-bg);
-            color: white;
+            background: var(--primary-gray);
+            color: var(--white);
+            font-size: 0.9rem;
         }
-        
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
             }
-            
             .sidebar {
                 width: 100%;
             }
-            
             .main-menu {
-                flex-direction: column;
+                flex-wrap: wrap;
+                gap: 5px;
             }
-            
             .message {
                 max-width: 90%;
+            }
+            .chat-header {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .chat-header div {
+                flex: 1;
             }
         }
     </style>
 </head>
 <body>
     <header class="main-header">
-        <img src="assets/Netunna_Cinza_Assinada.png" alt="Netunna Logo" class="logo" onerror="this.alt='Netunna Logo'">
+        <img src="assets/netunna-logo.png" alt="Netunna Software" class="logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMjAwIDYwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMjAwIDEwTDEwIDUwTDIwMCA2MHoiIGZpbGw9IiM1MDUwNTAiLz4KPHBhdGggZD0iTTEwIDEwTDEwIDUwTDEwIDYwTDEwIDEwIiBmaWxsPSIjMTMxMzEzIi8+CjxwYXRoIGQ9Ik0xMDAgMTBMMTAwIDUwTDEwMCA2MHoiIGZpbGw9IiM1MDUwNTAiLz4KPHBhdGggZD0iTTEwMCAxMEwxMDAgNTBMMTAwIDYwTDEwMCAxMCIgZmlsbD0iIzEzMTMxMyIvPgo8cGF0aCBkPSJNMjAwIDEwTDEwMCAxMEwyMDAgMTB6IiBmaWxsPSIjNTA1MDUwIi8+Cjwvc3ZnPg=='">
         <h1>EDNNA CHATBOT - NETUNNA SOFTWARE</h1>
     </header>
 
@@ -387,7 +468,7 @@
         <div class="main-content">
             <div class="chat-container">
                 <div class="chat-header">
-                    <img src="assets/ednna-avatar.png" alt="Ednna" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiMzNDk4REIiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiM3RjhDOEQiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
+                    <img src="assets/ednna-avatar.png" alt="Ednna" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiNmOTczMTYiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiNmYjkyM2MiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
                     <div>
                         <h2>Ednna Assistant</h2>
                         <p>Conectado ao banco de dados MySQL</p>
@@ -440,36 +521,12 @@
     </div>
 
     <footer>
-        <p>Netunna Software @ 2024</p>
+        <p>Netunna Software @ 2024 | Ednna Chatbot v1.0</p>
     </footer>
 
     <script>
-        // Simulação de banco de dados com perguntas e respostas
-        const knowledgeBase = [
-            {
-                question: "quem é você",
-                answer: "Eu sou a Ednna, assistente virtual inteligente da Netunna Software. Fui desenvolvida para ajudar com informações sobre produtos, serviços e suporte técnico."
-            },
-            {
-                question: "o que é a netunna software",
-                answer: "A Netunna Software é uma empresa especializada em desenvolvimento de soluções inteligentes, incluindo sistemas de gestão, aplicativos personalizados e integração com IA."
-            },
-            {
-                question: "quais serviços vocês oferecem",
-                answer: "Oferecemos: desenvolvimento de software personalizado, integração de sistemas, chatbots inteligentes, análise de dados, consultoria em TI e soluções em nuvem."
-            },
-            {
-                question: "como posso entrar em contato",
-                answer: "Você pode entrar em contato conosco pelo telefone (11) 3456-7890, pelo email contato@netunna.com.br ou através do nosso site www.netunna.com.br"
-            },
-            {
-                question: "você tem integração com banco de dados",
-                answer: "Sim! Estou integrada com um banco de dados MySQL que me permite acessar informações atualizadas em tempo real sobre produtos, clientes e suporte."
-            }
-        ];
-        
-        // Função para enviar mensagem
-        function sendMessage() {
+        // Função para enviar mensagem para o backend Flask
+        async function sendMessage() {
             const userInput = document.getElementById('user-input');
             const message = userInput.value.trim();
             
@@ -477,15 +534,44 @@
             
             // Adicionar mensagem do usuário ao chat
             addMessage(message, 'user');
-            
-            // Processar a mensagem e obter resposta
-            setTimeout(() => {
-                const response = getResponse(message);
-                addMessage(response, 'bot');
-            }, 1000);
-            
-            // Limpar o campo de entrada
             userInput.value = '';
+            
+            // Mostrar "digitando..."
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('message', 'bot-message');
+            typingDiv.innerHTML = '<em>Ednna está digitando...</em>';
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        user_id: 1
+                    })
+                });
+                
+                // Remover "digitando..."
+                typingDiv.remove();
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addMessage(data.response, 'bot');
+                } else {
+                    addMessage('Desculpe, tive um problema interno. Tente novamente.', 'bot');
+                    console.error('Erro do servidor:', data.error);
+                }
+            } catch (error) {
+                typingDiv.remove();
+                addMessage('Erro de conexão. Verifique se o servidor está online.', 'bot');
+                console.error('Erro de rede:', error);
+            }
         }
         
         // Função para adicionar mensagem ao chat
@@ -498,28 +584,6 @@
             
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        // Função para obter resposta baseada na pergunta
-        function getResponse(question) {
-            question = question.toLowerCase();
-            
-            // Verificar se há uma correspondência direta
-            for (const item of knowledgeBase) {
-                if (question.includes(item.question)) {
-                    return item.answer;
-                }
-            }
-            
-            // Respostas padrão para perguntas não encontradas
-            const defaultResponses = [
-                "Desculpe, não entendi. Pode reformular sua pergunta?",
-                "Interessante! Vou precisar consultar essa informação no banco de dados. Pode fazer outra pergunta enquanto isso?",
-                "Estou aprendendo ainda. No momento, consigo responder perguntas sobre nossos produtos e serviços.",
-                "Não tenho uma resposta para isso no momento. Que tal perguntar sobre nossos serviços?"
-            ];
-            
-            return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
         }
         
         // Função para enviar mensagem ao pressionar Enter
@@ -538,9 +602,19 @@
         document.getElementById('logout-button').addEventListener('click', function() {
             if (confirm('Tem certeza que deseja sair?')) {
                 alert('Sessão encerrada com sucesso!');
-                // Redirecionar para página de login
                 // window.location.href = 'login.html';
             }
+        });
+
+        // Carregar histórico de conversas (placeholder - pode expandir depois)
+        document.querySelectorAll('.submenu-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const target = this.getAttribute('data-target');
+                if (target === 'conversations') {
+                    alert('Carregando histórico de conversas... (em breve)');
+                    // Aqui você pode chamar /api/conversations e mostrar em modal
+                }
+            });
         });
     </script>
 </body>
