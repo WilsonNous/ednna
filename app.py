@@ -196,11 +196,14 @@ def get_chat_response(message, user_id):
             log_message(conversation_id, result['answer'], False, connection)
             return {'response': result['answer'], 'intent': result['category'], 'confidence': 0.9}
 
-        # 7. Se não encontrou, aplica filtro só para casos extremos
-        if is_offensive_or_absurd(message):
-            filtered_response = get_appropriate_response_for_offensive(message)
-            log_message(conversation_id, filtered_response, False, connection)
-            return {'response': filtered_response, 'intent': 'filtered', 'confidence': 0.99}
+        # 7. RESPOSTA PADRÃO SEGURA — NUNCA EXPOE DADOS SENSÍVEIS
+        default_response = "Desculpe, ainda não sei responder isso. Pergunte sobre conciliação, EDI, BPO ou nossos produtos!"
+        log_message(conversation_id, default_response, False, connection)
+        return {
+            'response': default_response,
+            'intent': 'unknown',
+            'confidence': 0.1
+        }
 
         # 8. Resposta padrão
         default_response = "Desculpe, ainda não sei responder isso. Pergunte sobre conciliação, EDI, BPO ou nossos produtos!"
