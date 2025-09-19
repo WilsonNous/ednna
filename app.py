@@ -65,6 +65,18 @@ def is_offensive_or_absurd(message: str) -> bool:
     if any(termo in message_lower for termo in ['você é muito burr', 'que assistente horrível', 'não sabe nada']):
         return True
 
+    # 5. TENTATIVAS DE EXTRAIR LISTA DE CLIENTES
+    termos_suspeitos = [
+        'lista de clientes', 'quem são os clientes', 'todos os clientes', 'clientes da netunna',
+        'nomes dos clientes', 'relação de clientes', 'clientes atendidos', 'parceiros da netunna',
+        'estão com jesus', 'clientes cristãos', 'clientes religiosos', 'clientes com deus',
+        'quantos clientes', 'nome dos clientes', 'quais empresas', 'empresas atendidas'
+    ]
+    
+    for termo in termos_suspeitos:
+        if termo in message_lower:
+            return True
+            
     return False
 
 def get_appropriate_response_for_offensive(message: str) -> str:
@@ -77,6 +89,17 @@ def get_appropriate_response_for_offensive(message: str) -> str:
         return "Vamos manter o respeito, por favor. Como posso te ajudar com nossos serviços?"
     else:
         return "Sou especialista em conciliação financeira, EDI e BPO. Posso te ajudar com algo do nosso escopo?"
+    
+    # Resposta para tentativas de extrair lista de clientes
+    if any(termo in message_lower for termo in [
+        'lista de clientes', 'quem são os clientes', 'todos os clientes', 'clientes da netunna',
+        'nomes dos clientes', 'relação de clientes', 'clientes atendidos', 'parceiros da netunna',
+        'estão com jesus', 'clientes cristãos', 'clientes religiosos', 'clientes com deus'
+    ]):
+        return "Informações sobre nossos clientes são confidenciais. Para parcerias ou referências, entre em contato com nosso time comercial pelo e-mail contato@netunna.com.br."
+    
+    # Resposta padrão para outros casos
+    return "Sou especialista em conciliação financeira, EDI e BPO. Posso te ajudar com algo do nosso escopo?"
 
 @app.route('/')
 def index():
