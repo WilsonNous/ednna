@@ -92,7 +92,7 @@ def chat():
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
 def get_chat_response(message, user_id):
-    """Processa a mensagem e retorna uma resposta do banco de dados"""
+    """Processa a mensagem e retorna uma resposta usando Full-Text Search"""
     connection = get_db_connection()
     if not connection:
         return {'response': 'Erro de conexão com o banco de dados', 'intent': 'error'}
@@ -100,8 +100,8 @@ def get_chat_response(message, user_id):
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # Buscar na base de conhecimento
-        query = """
+        # Primeiro: tenta busca exata com LIKE (para palavras curtas ou específicas)
+        query_exact = """
         SELECT answer, category 
         FROM knowledge_base 
         WHERE question LIKE %s OR keywords LIKE %s 
@@ -109,8 +109,21 @@ def get_chat_response(message, user_id):
         LIMIT 1
         """
         search_term = f'%{message}%'
-        cursor.execute(query, (search_term, search_term))
+        cursor.execute(query_exact, (search_term, search_term))
         result = cursor.fetchone()
+        
+        # Se não encontrar, tenta Full-Text Search (para similaridade)
+        if not result and len(message.split()) > 1:
+            query_fulltext = """
+            SELECT answer, category, 
+                   MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) as score
+            FROM knowledge_base
+            WHERE MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE)
+            ORDER BY score DESC
+            LIMIT 1
+            """
+            cursor.execute(query_fulltext, (message, message))
+            result = cursor.fetchone()
         
         # Registrar a mensagem do usuário
         conversation_id = get_or_create_conversation(user_id, connection)
