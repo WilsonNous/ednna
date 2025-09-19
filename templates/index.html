@@ -151,12 +151,32 @@
             color: var(--text-gray);
             font-size: 0.85rem;
         }
+
+        /* Estilo para Markdown */
+        .bot-message strong {
+            font-weight: 600;
+            color: var(--orange);
+        }
+
+        .bot-message em {
+            font-style: italic;
+        }
+
+        .bot-message ul,
+        .bot-message ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .bot-message li {
+            margin: 4px 0;
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <img src="assets/ednna-avatar.png" alt="Ednna" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiNmOTczMTYiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiNmYjkyM2MiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
+            <img src="assets/ednna-avatar.png" alt="Ednna" onerror="this.src='image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiNmOTczMTYiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiNmYjkyM2MiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
             <h2>Ednna Assistant</h2>
         </div>
         
@@ -175,6 +195,9 @@
     <footer>
         Netunna Software © 2024
     </footer>
+
+    <!-- Adiciona marked.js para renderizar Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <script>
         async function sendMessage() {
@@ -227,7 +250,14 @@
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
             messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
-            messageDiv.textContent = text;
+            
+            if (sender === 'bot') {
+                // Renderiza Markdown para mensagens do bot
+                messageDiv.innerHTML = marked.parse(text);
+            } else {
+                messageDiv.textContent = text;
+            }
+            
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
