@@ -41,6 +41,40 @@ def get_db_connection():
         logger.error(f"Erro ao conectar ao MySQL: {e}")
         return None
 
+def should_filter_message(message: str) -> str:
+    """
+    Verifica se a mensagem deve ser filtrada (perguntas idiotas, ofensivas, etc)
+    Retorna uma resposta pré-definida se for o caso, ou None se for para buscar no banco.
+    """
+    message_lower = message.lower().strip()
+    
+    # Lista de palavrões (adicione mais se quiser)
+    palavroes = ['porra', 'caralho', 'puta', 'merda', 'bosta', 'cu', 'foda', 'idiota', 'burro', 'imbecil']
+    for palavrao in palavroes:
+        if palavrao in message_lower:
+            return "Vamos manter o respeito, por favor. Como posso te ajudar com nossos serviços?"
+    
+    # Perguntas políticas/religiosas
+    if any(p in message_lower for p in ['petista', 'bolsonaro', 'lula', 'deus', 'jesus', 'alá', 'religião', 'política', 'eleição']):
+        return "Sou uma assistente técnica — prefiro falar sobre conciliação, EDI, BPO e nossos produtos. Posso te ajudar com algo nessa área?"
+    
+    # Perguntas absurdas / fora de escopo
+    absurdas = [
+        'arroz com feijão é bom', 'qual a capital do brasil', '50+1 é quanto', 'quantos funcionários tem',
+        'qual o nome do ceo', 'quem é o dono', 'qual seu signo', 'você é homem ou mulher', 'você tem namorado',
+        'qual a cor do cavalo branco de napoleão', 'se eu jogar um lápis no chão, ele cai', '2+2', 'quanto é 1+1'
+    ]
+    for absurda in absurdas:
+        if absurda in message_lower:
+            return "Sou especialista em conciliação financeira, EDI e BPO — mas não em cálculos, culinária ou curiosidades. Posso te ajudar com algo do nosso escopo?"
+    
+    # Perguntas muito curtas ou sem sentido
+    if len(message_lower.split()) < 2 and message_lower not in ['oi', 'olá', 'bom dia', 'boa tarde', 'boa noite']:
+        return "Desculpe, não entendi. Pode reformular sua pergunta? Estou aqui para ajudar com nossos produtos e serviços!"
+    
+    # Se passou por todos os filtros, retorna None → vai buscar no banco
+    return None
+
 @app.route('/')
 def index():
     """Página principal do chatbot"""
@@ -92,31 +126,41 @@ def chat():
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
 def get_chat_response(message, user_id):
-    """Processa a mensagem e retorna uma resposta — com normalização de termos e prioridade para saudações"""
+    """Processa a mensagem e retorna uma resposta — com filtro de perguntas idiotas"""
     connection = get_db_connection()
     if not connection:
         return {'response': 'Erro de conexão com o banco de dados', 'intent': 'error'}
     
     try:
+        # 🔍 PRIMEIRO: Aplica o filtro de perguntas idiotas
+        filtered_response = should_filter_message(message)
+        if filtered_response:
+            # Registrar a mensagem do usuário
+            conversation_id = get_or_create_conversation(user_id, connection)
+            log_message(conversation_id, message, True, connection)
+            log_message(conversation_id, filtered_response, False, connection)
+            return {
+                'response': filtered_response,
+                'intent': 'filtered',
+                'confidence': 0.99
+            }
+        
+        # 🧠 DEPOIS: Processa normalmente (saudações, LIKE, Full-Text Search)
         cursor = connection.cursor(dictionary=True)
         
-        # Normalizar a mensagem: remover espaços extras, converter para minúsculas
-        mensagem_original = message.strip()
-        mensagem_lower = mensagem_original.lower()
+        # Normalizar a mensagem
+        mensagem_lower = message.strip().lower()
         
-        # Lista de saudações comuns
+        # Lista de saudações
         saudacoes = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'eai', 'e aí', 'tudo bem', 'hello', 'hi']
-        
-        # PRIORIDADE 1: Se for saudação, responde saudação
         for saudacao in saudacoes:
             if saudacao in mensagem_lower.split() or mensagem_lower.startswith(saudacao):
                 query_saudacao = "SELECT answer, category FROM knowledge_base WHERE category = 'saudacao' ORDER BY id LIMIT 1"
                 cursor.execute(query_saudacao)
                 result = cursor.fetchone()
                 if result:
-                    # Registrar e retornar
                     conversation_id = get_or_create_conversation(user_id, connection)
-                    log_message(conversation_id, mensagem_original, True, connection)
+                    log_message(conversation_id, message, True, connection)
                     log_message(conversation_id, result['answer'], False, connection)
                     return {
                         'response': result['answer'],
@@ -124,7 +168,7 @@ def get_chat_response(message, user_id):
                         'confidence': 0.95
                     }
         
-        # 🔁 NORMALIZAÇÃO INTELIGENTE: tratar variações de "Teia Card" e "Teia Values"
+        # Termos de produto (Teia Card, Teia Values)
         termos_produto = {
             'teiacard': 'teia card',
             'teiacards': 'teia card',
@@ -135,14 +179,12 @@ def get_chat_response(message, user_id):
             'teia values': 'teia values',
             'teia value': 'teia values'
         }
-        
         mensagem_normalizada = mensagem_lower
-        
         for termo_errado, termo_correto in termos_produto.items():
             if termo_errado in mensagem_normalizada:
                 mensagem_normalizada = mensagem_normalizada.replace(termo_errado, termo_correto)
         
-        # PRIORIDADE 2: Busca exata com LIKE (usando mensagem normalizada)
+        # Busca exata
         query_exact = """
         SELECT answer, category 
         FROM knowledge_base 
@@ -154,26 +196,25 @@ def get_chat_response(message, user_id):
         cursor.execute(query_exact, (search_term, search_term))
         result = cursor.fetchone()
         
-        # PRIORIDADE 3: Full-Text Search (só se não for saudação e não achou com LIKE)
+        # Full-Text Search
         if not result and len(mensagem_normalizada.split()) > 1:
             query_fulltext = """
             SELECT answer, category, 
                    MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) as score
             FROM knowledge_base
             WHERE MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE)
-            AND MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.5  -- SCORE MÍNIMO
+            AND MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.5
             ORDER BY score DESC
             LIMIT 1
             """
             cursor.execute(query_fulltext, (mensagem_normalizada, mensagem_normalizada, mensagem_normalizada))
             result = cursor.fetchone()
         
-        # Registrar a mensagem do usuário (original)
+        # Registrar a mensagem do usuário
         conversation_id = get_or_create_conversation(user_id, connection)
-        log_message(conversation_id, mensagem_original, True, connection)
+        log_message(conversation_id, message, True, connection)
         
         if result:
-            # Registrar a resposta do bot
             log_message(conversation_id, result['answer'], False, connection)
             return {
                 'response': result['answer'],
@@ -181,7 +222,6 @@ def get_chat_response(message, user_id):
                 'confidence': 0.9
             }
         else:
-            # Resposta padrão se não encontrar
             default_response = "Desculpe, ainda não sei responder isso. Pergunte sobre nossos serviços ou produtos!"
             log_message(conversation_id, default_response, False, connection)
             return {
