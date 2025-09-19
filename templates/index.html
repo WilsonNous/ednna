@@ -182,7 +182,10 @@
         
         <div class="chat-messages" id="chat-messages">
             <div class="message bot-message">
-                Olá! Eu sou a Ednna, assistente virtual da Netunna Software. Como posso ajudar?
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <img src="{{ url_for('static', filename='assets/ednna-avat2.png') }}" alt="Ednna" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;">
+                    <div>Olá! Eu sou a Ednna, assistente virtual da Netunna Software. Como posso ajudar?</div>
+                </div>
             </div>
         </div>
         
