@@ -92,7 +92,7 @@ def chat():
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
 def get_chat_response(message, user_id):
-    """Processa a mensagem e retorna uma resposta — com prioridade para saudações e score mínimo"""
+    """Processa a mensagem e retorna uma resposta — com normalização de termos e prioridade para saudações"""
     connection = get_db_connection()
     if not connection:
         return {'response': 'Erro de conexão com o banco de dados', 'intent': 'error'}
@@ -100,9 +100,12 @@ def get_chat_response(message, user_id):
     try:
         cursor = connection.cursor(dictionary=True)
         
+        # Normalizar a mensagem: remover espaços extras, converter para minúsculas
+        mensagem_original = message.strip()
+        mensagem_lower = mensagem_original.lower()
+        
         # Lista de saudações comuns
         saudacoes = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'eai', 'e aí', 'tudo bem', 'hello', 'hi']
-        mensagem_lower = message.lower().strip()
         
         # PRIORIDADE 1: Se for saudação, responde saudação
         for saudacao in saudacoes:
@@ -113,7 +116,7 @@ def get_chat_response(message, user_id):
                 if result:
                     # Registrar e retornar
                     conversation_id = get_or_create_conversation(user_id, connection)
-                    log_message(conversation_id, message, True, connection)
+                    log_message(conversation_id, mensagem_original, True, connection)
                     log_message(conversation_id, result['answer'], False, connection)
                     return {
                         'response': result['answer'],
@@ -121,7 +124,25 @@ def get_chat_response(message, user_id):
                         'confidence': 0.95
                     }
         
-        # PRIORIDADE 2: Busca exata com LIKE
+        # 🔁 NORMALIZAÇÃO INTELIGENTE: tratar variações de "Teia Card" e "Teia Values"
+        termos_produto = {
+            'teiacard': 'teia card',
+            'teiacards': 'teia card',
+            'teia card': 'teia card',
+            'teia cards': 'teia card',
+            'teia value': 'teia values',
+            'teiavalues': 'teia values',
+            'teia values': 'teia values',
+            'teia value': 'teia values'
+        }
+        
+        mensagem_normalizada = mensagem_lower
+        
+        for termo_errado, termo_correto in termos_produto.items():
+            if termo_errado in mensagem_normalizada:
+                mensagem_normalizada = mensagem_normalizada.replace(termo_errado, termo_correto)
+        
+        # PRIORIDADE 2: Busca exata com LIKE (usando mensagem normalizada)
         query_exact = """
         SELECT answer, category 
         FROM knowledge_base 
@@ -129,12 +150,12 @@ def get_chat_response(message, user_id):
         ORDER BY updated_at DESC 
         LIMIT 1
         """
-        search_term = f'%{message}%'
+        search_term = f'%{mensagem_normalizada}%'
         cursor.execute(query_exact, (search_term, search_term))
         result = cursor.fetchone()
         
         # PRIORIDADE 3: Full-Text Search (só se não for saudação e não achou com LIKE)
-        if not result and len(message.split()) > 1:
+        if not result and len(mensagem_normalizada.split()) > 1:
             query_fulltext = """
             SELECT answer, category, 
                    MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) as score
@@ -144,12 +165,12 @@ def get_chat_response(message, user_id):
             ORDER BY score DESC
             LIMIT 1
             """
-            cursor.execute(query_fulltext, (message, message, message))
+            cursor.execute(query_fulltext, (mensagem_normalizada, mensagem_normalizada, mensagem_normalizada))
             result = cursor.fetchone()
         
-        # Registrar a mensagem do usuário
+        # Registrar a mensagem do usuário (original)
         conversation_id = get_or_create_conversation(user_id, connection)
-        log_message(conversation_id, message, True, connection)
+        log_message(conversation_id, mensagem_original, True, connection)
         
         if result:
             # Registrar a resposta do bot
