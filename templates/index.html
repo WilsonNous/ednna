@@ -246,21 +246,41 @@
         }
         
         function addMessage(text, sender) {
-            const chatMessages = document.getElementById('chat-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
-            messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
-            
-            if (sender === 'bot') {
-                // Renderiza Markdown para mensagens do bot
-                messageDiv.innerHTML = marked.parse(text);
-            } else {
-                messageDiv.textContent = text;
+                const chatMessages = document.getElementById('chat-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+                
+                if (sender === 'bot') {
+                    // Container para avatar + mensagem
+                    const botContainer = document.createElement('div');
+                    botContainer.style.display = 'flex';
+                    botContainer.style.alignItems = 'flex-start';
+                    botContainer.style.gap = '12px';
+                    
+                    // Avatar
+                    const avatar = document.createElement('img');
+                    avatar.src = "{{ url_for('static', filename='assets/ednna-avatar.png') }}";
+                    avatar.alt = "Ednna";
+                    avatar.style.width = "32px";
+                    avatar.style.height = "32px";
+                    avatar.style.borderRadius = "50%";
+                    avatar.style.flexShrink = "0";
+                    
+                    // Conteúdo da mensagem
+                    const messageContent = document.createElement('div');
+                    messageContent.innerHTML = marked.parse(text);
+                    
+                    botContainer.appendChild(avatar);
+                    botContainer.appendChild(messageContent);
+                    messageDiv.appendChild(botContainer);
+                } else {
+                    messageDiv.textContent = text;
+                }
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
         
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
