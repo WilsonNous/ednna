@@ -281,6 +281,7 @@ def get_chat_response(message, user_id):
     if not connection:
         return {'response': 'Erro de conexão com o banco de dados', 'intent': 'error'}
 
+    cursor = None  # Inicializa cursor como None
     try:
         # 🔍 PRIMEIRO: Aplica o filtro de perguntas idiotas
         filtered_response = should_filter_message(message)
@@ -384,13 +385,16 @@ def get_chat_response(message, user_id):
         logger.error(f"Erro no banco de dados: {e}")
         return {'response': 'Erro ao processar sua mensagem', 'intent': 'error'}
     finally:
-        if connection and connection.is_connected():
+        # CORREÇÃO: Verifica se cursor foi criado antes de tentar fechar
+        if cursor is not None:
             cursor.close()
+        if connection and connection.is_connected():
             connection.close()
 
 
 def get_or_create_conversation(user_id, connection):
     """Obtém ou cria uma nova conversa para o usuário"""
+    cursor = None
     try:
         cursor = connection.cursor()
         query = "SELECT id FROM conversations WHERE user_id = %s AND status = 'active' ORDER BY started_at DESC LIMIT 1"
@@ -408,10 +412,14 @@ def get_or_create_conversation(user_id, connection):
     except Error as e:
         logger.error(f"Erro ao obter/criar conversa: {e}")
         return 1
+    finally:
+        if cursor is not None:
+            cursor.close()
 
 
 def log_message(conversation_id, message, is_from_user, connection):
     """Registra uma mensagem no banco de dados"""
+    cursor = None
     try:
         cursor = connection.cursor()
         query = """
@@ -422,6 +430,9 @@ def log_message(conversation_id, message, is_from_user, connection):
         connection.commit()
     except Error as e:
         logger.error(f"Erro ao registrar mensagem: {e}")
+    finally:
+        if cursor is not None:
+            cursor.close()
 
 
 if __name__ == '__main__':
