@@ -92,7 +92,7 @@ def chat():
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
 def get_chat_response(message, user_id):
-    """Processa a mensagem e retorna uma resposta usando Full-Text Search"""
+    """Processa a mensagem e retorna uma resposta — com prioridade para saudações e score mínimo"""
     connection = get_db_connection()
     if not connection:
         return {'response': 'Erro de conexão com o banco de dados', 'intent': 'error'}
@@ -100,7 +100,28 @@ def get_chat_response(message, user_id):
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # Primeiro: tenta busca exata com LIKE (para palavras curtas ou específicas)
+        # Lista de saudações comuns
+        saudacoes = ['oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'eai', 'e aí', 'tudo bem', 'hello', 'hi']
+        mensagem_lower = message.lower().strip()
+        
+        # PRIORIDADE 1: Se for saudação, responde saudação
+        for saudacao in saudacoes:
+            if saudacao in mensagem_lower.split() or mensagem_lower.startswith(saudacao):
+                query_saudacao = "SELECT answer, category FROM knowledge_base WHERE category = 'saudacao' ORDER BY id LIMIT 1"
+                cursor.execute(query_saudacao)
+                result = cursor.fetchone()
+                if result:
+                    # Registrar e retornar
+                    conversation_id = get_or_create_conversation(user_id, connection)
+                    log_message(conversation_id, message, True, connection)
+                    log_message(conversation_id, result['answer'], False, connection)
+                    return {
+                        'response': result['answer'],
+                        'intent': result['category'],
+                        'confidence': 0.95
+                    }
+        
+        # PRIORIDADE 2: Busca exata com LIKE
         query_exact = """
         SELECT answer, category 
         FROM knowledge_base 
@@ -112,17 +133,18 @@ def get_chat_response(message, user_id):
         cursor.execute(query_exact, (search_term, search_term))
         result = cursor.fetchone()
         
-        # Se não encontrar, tenta Full-Text Search (para similaridade)
+        # PRIORIDADE 3: Full-Text Search (só se não for saudação e não achou com LIKE)
         if not result and len(message.split()) > 1:
             query_fulltext = """
             SELECT answer, category, 
                    MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) as score
             FROM knowledge_base
             WHERE MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE)
+            AND MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.5  -- SCORE MÍNIMO
             ORDER BY score DESC
             LIMIT 1
             """
-            cursor.execute(query_fulltext, (message, message))
+            cursor.execute(query_fulltext, (message, message, message))
             result = cursor.fetchone()
         
         # Registrar a mensagem do usuário
