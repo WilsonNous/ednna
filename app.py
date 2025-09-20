@@ -42,6 +42,31 @@ def get_db_connection():
         logger.error(f"Erro ao conectar ao MySQL: {e}")
         return None
 
+def is_absurd_context(message: str) -> bool:
+    """
+    Verifica se a mensagem é absurda ou sem contexto — mesmo que não seja ofensiva.
+    """
+    message_lower = message.lower().strip()
+    
+    # Palavras soltas sem contexto
+    palavras_soltas = ['pena', 'banho', 'macaco', 'galho', 'shoope', 'ahh', 'ate', 'mas', 'serio', 'select', 'multas', 'gols', 'choro', 'palmeiras', 'tio', 'tiozao', 'mãe', 'pai']
+    if len(message_lower.split()) == 1 and message_lower in palavras_soltas:
+        return True
+    
+    # Frases absurdas
+    absurdas = [
+        'xuxu com quiabo é bom', 'quando toma banho', 'banho eh uma boa palavra', 
+        'e macaco no galho', 'qual o animal voce gosta', 'serio e o que fax saide animal',
+        'voce mora em sao paulo', 'ahh que pena', 'que pena é essa', 'ate pena', 'mas que pena',
+        'choro do palmeiras', 'palmeiras não tem mundial', 'voce tem mae', 'então tem pai tambem',
+        'e o tio como vai', 'quem é o tiozao da netunna'
+    ]
+    for absurda in absurdas:
+        if absurda in message_lower:
+            return True
+    
+    return False
+
 def is_offensive_or_absurd(message: str) -> bool:
     """Verifica se a mensagem é ofensiva ou absurdamente fora do contexto"""
     message_lower = message.lower().strip()
@@ -169,22 +194,37 @@ def get_chat_response(message, user_id):
         mensagem_normalizada = mensagem_lower
         for termo_errado, termo_correto in termos_produto.items():
             mensagem_normalizada = re.sub(r'\b' + re.escape(termo_errado) + r'\b', termo_correto, mensagem_normalizada)
-
+       
+        # 2.5: FILTRO DE CONTEXTO ABSURDO
+        if is_absurd_context(message):
+            filtered_response = "Prefiro focar em ajudar com conciliação, EDI, BPO e nossos produtos. Posso te ajudar com algo nessa área?"
+            conversation_id = get_or_create_conversation(user_id, connection)
+            log_message(conversation_id, message, True, connection)
+            log_message(conversation_id, filtered_response, False, connection)
+            return {
+                'response': filtered_response,
+                'intent': 'filtered',
+                'confidence': 0.99
+            }
+        
         # 3. Busca exata
         query_exact = "SELECT answer, category FROM knowledge_base WHERE question LIKE %s OR keywords LIKE %s ORDER BY updated_at DESC LIMIT 1"
         search_term = f'%{mensagem_normalizada}%'
         cursor.execute(query_exact, (search_term, search_term))
         result = cursor.fetchone()
 
-        # 4. Full-Text Search
+        # 4. Full-Text Search — SÓ SE SCORE > 0.7
         if not result and len(mensagem_normalizada.split()) > 1:
             query_fulltext = """
-            SELECT answer, category, MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) as score
+            SELECT answer, category, 
+                   MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) as score
             FROM knowledge_base
             WHERE MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE)
-            ORDER BY score DESC LIMIT 1
+            AND MATCH(question, keywords, answer) AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.7  -- SCORE MÍNIMO
+            ORDER BY score DESC
+            LIMIT 1
             """
-            cursor.execute(query_fulltext, (mensagem_normalizada, mensagem_normalizada))
+            cursor.execute(query_fulltext, (mensagem_normalizada, mensagem_normalizada, mensagem_normalizada))
             result = cursor.fetchone()
 
         # 5. Registrar mensagem
