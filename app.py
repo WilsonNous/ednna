@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ednna Chatbot - Netunna Software
-Backend Flask com MySQL — Nível 1: Contexto Conversacional
+Backend Flask com MySQL — Nível 2+3: Contexto + Memória de Usuário + Aprendizado Ativo
 """
 
 from flask import Flask, request, jsonify, render_template, session
@@ -10,8 +10,8 @@ from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 import logging
-import re
-from datetime import datetime  # ✅ CORREÇÃO: IMPORTADO!
+import re  # ✅ Importe único no topo
+from datetime import datetime
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -78,8 +78,8 @@ def is_offensive_or_absurd(message: str) -> bool:
     message_lower = message.lower().strip()
 
     # Palavrões graves
-    palavroes_graves = ['caralho', 'porra', 'buceta', 'xoxota', 'piroca', 'rola', 'pau', 'vtnc', 'fdp',
-                        'arrombado', 'desgraçado']
+    palavroes_graves = ['caralho', 'porra', 'buceta', 'xoxota', 'piroca', 'rola', 'pau', 'vtnc',
+                        'fdp', 'arrombado', 'desgraçado']
     if any(palavrao in message_lower for palavrao in palavroes_graves):
         return True
 
@@ -206,6 +206,193 @@ def chat():
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
 
+# === ROTAS ADMINISTRATIVAS PARA APRENDIZADO ATIVO ===
+
+@app.route('/admin/learn')
+def learn_dashboard():
+    """Painel: mostra perguntas não respondidas"""
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Acesso negado'}), 403
+
+    connection = get_db_connection()
+    if not connection:
+        return "Erro de conexão", 500
+
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT id, user_id, question, created_at 
+        FROM unknown_questions 
+        WHERE status = 'pending' 
+        ORDER BY created_at DESC 
+        LIMIT 50
+    """)
+    questions = cursor.fetchall()
+    cursor.close()
+    connection.close()
+
+    # Renderiza o HTML diretamente com Jinja (mesmo sem templates/)
+    html = '''
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Ensinar Ednna | Netunna</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #f7f9fc; color: #333; }
+        h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .card { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 15px; margin: 15px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        input, textarea, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        textarea { resize: vertical; min-height: 80px; }
+        button { background: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .empty { text-align: center; color: #777; font-style: italic; padding: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Ensinar Ednna</h1>
+    {% if questions %}
+        {% for q in questions %}
+        <div class="card" data-id="{{ q.id }}">
+            <p><strong>Usuário {{ q.user_id }}:</strong> "{{ q.question }}"</p>
+            <form class="teach-form" style="display:flex;flex-direction:column;">
+                <input type="text" value="{{ q.question }}" readonly style="background:#f0f0f0;">
+                <textarea placeholder="Resposta correta..." rows="4" required></textarea>
+                <select required>
+                    <option value="">Categoria</option>
+                    <option value="teia_card">Teia Card</option>
+                    <option value="teia_values">Teia Values</option>
+                    <option value="edi">EDI</option>
+                    <option value="bpo">BPO</option>
+                    <option value="empresa">Empresa</option>
+                    <option value="suporte">Suporte</option>
+                </select>
+                <button type="submit">✅ Ensinar Ednna</button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty"><p>Nenhuma pergunta pendente.</p></div>
+    {% endif %}
+
+    <script>
+        document.querySelectorAll('.teach-form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const [question, answer, category] = [
+                    form.querySelector('input').value,
+                    form.querySelector('textarea').value,
+                    form.querySelector('select').value
+                ];
+
+                const res = await fetch('/admin/teach', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, answer, category })
+                });
+
+                if (res.ok) {
+                    alert('✅ Aprendido!');
+                    form.closest('.card')?.remove();
+                } else {
+                    alert('❌ Erro');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+    '''.replace('{% if questions %}', '').replace('{% for q in questions %}', '\n'.join([
+        f'<div class="card" data-id="{q["id"]}">'
+        f'<p><strong>Usuário {q["user_id"]}:</strong> "{q["question"]}"</p>'
+        '<form class="teach-form" style="display:flex;flex-direction:column;">'
+        f'<input type="text" value="{q["question"]}" readonly style="background:#f0f0f0;">'
+        '<textarea placeholder="Resposta correta..." rows="4" required></textarea>'
+        '<select required>'
+        '<option value="">Categoria</option>'
+        '<option value="teia_card">Teia Card</option>'
+        '<option value="teia_values">Teia Values</option>'
+        '<option value="edi">EDI</option>'
+        '<option value="bpo">BPO</option>'
+        '<option value="empresa">Empresa</option>'
+        '<option value="suporte">Suporte</option>'
+        '</select>'
+        '<button type="submit">✅ Ensinar Ednna</button>'
+        '</form></div>' for q in questions
+    ]) if questions else '<div class="empty"><p>Nenhuma pergunta pendente.</p></div>')
+
+    return html
+
+
+@app.route('/admin/teach', methods=['POST'])
+def teach_ednna():
+    """Adiciona nova pergunta/resposta ao conhecimento"""
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Acesso negado'}), 403
+
+    data = request.get_json()
+    question = data.get('question', '').strip()
+    answer = data.get('answer', '').strip()
+    category = data.get('category', '').strip()
+
+    if not all([question, answer, category]):
+        return jsonify({"error": "Campos obrigatórios"}), 400
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "DB"}), 500
+
+    cursor = connection.cursor()
+    try:
+        # Gerar keywords simples
+        keywords = ",".join(set(
+            w for w in re.findall(r'\w+', answer.lower()) if len(w) > 4
+        )[:15]) or "geral"
+
+        cursor.execute("""
+            INSERT INTO knowledge_base (question, answer, category, keywords, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE answer = VALUES(answer), updated_at = NOW()
+        """, (question, answer, category, keywords))
+
+        cursor.execute("""
+            UPDATE unknown_questions SET status = 'answered' WHERE question = %s
+        """, (question,))
+
+        connection.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+# Rota de login simples
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        if request.form.get('password') == os.getenv('ADMIN_PASSWORD', 'netunna123'):
+            session['admin_logged_in'] = True
+            return redirect('/admin/learn')
+        return 'Senha incorreta', 401
+    return '''
+        <h3>Login Admin</h3>
+        <form method="post">
+            <input type="password" name="password" placeholder="Senha" required>
+            <button type="submit">Entrar</button>
+        </form>
+    '''
+
+
+# Proteger as rotas
+@app.before_request
+def require_login():
+    if '/admin/' in request.path and not request.endpoint == 'admin_login':
+        if not session.get('admin_logged_in') and request.endpoint != 'static':
+            return redirect('/admin/login')
+
+
 def get_chat_response(message, user_id, last_user_question=None):
     """Processa a mensagem — consulta banco primeiro, filtra só se necessário, com contexto inteligente"""
     connection = get_db_connection()
@@ -217,32 +404,73 @@ def get_chat_response(message, user_id, last_user_question=None):
         cursor = connection.cursor(dictionary=True)
         mensagem_lower = message.strip().lower()
 
+        # 🔹 NÍVEL 2: Carrega perfil do usuário
+        profile = get_or_create_user_profile(user_id, connection)
+
+        # 🔹 Detecta e salva informações do perfil
+        name_match = None
+        company_match = None
+
+        # ✅ Correção 1: Regex separadas para evitar erro de lookbehind
+        nome_pattern = r"(?:me chamo|meu nome é)\s+(\w+)"
+        empresa_pattern = r"(?:trabalho na|empresa)\s+(\w+)"
+
+        nome_busca = re.search(nome_pattern, mensagem_lower)
+        if nome_busca and not profile['name']:
+            name = nome_busca.group(1).title()
+            update_user_profile(user_id, {'name': name}, connection)
+            profile['name'] = name
+
+        empresa_busca = re.search(empresa_pattern, mensagem_lower)
+        if empresa_busca and not profile['company']:
+            company = empresa_busca.group(1).title()
+            update_user_profile(user_id, {'company': company}, connection)
+            profile['company'] = company
+
+        # Detecta ERP
+        for erp in ['totvs', 'sap', 'rm', 'protheus', 'oracle', 'sankhya']:
+            if erp in mensagem_lower and not profile['erp']:
+                update_user_profile(user_id, {'erp': erp.upper()}, connection)
+                profile['erp'] = erp.upper()
+                break
+
+        # 🔹 Prefixo personalizado
+        response_prefix = ""
+        if profile['name']:
+            response_prefix += f"Olá, {profile['name']}! "
+        if profile['company']:
+            response_prefix += f"Da {profile['company']}, certo? "
+
         # ✅ 1. LÓGICA DE CONTEXTO: Se pergunta é curta, use a anterior
         if len(message.split()) <= 2 and last_user_question:
-            # Se a pergunta atual é curta, e a anterior foi sobre um produto...
-            if "teia" in last_user_question.lower():
-                if "card" in last_user_question.lower():
+            last_lower = last_user_question.lower()
+            msg_lower = message.lower()
+
+            if "teia" in last_lower:
+                if "card" in last_lower:
                     message = "o que é o teia card"
-                elif "values" in last_user_question.lower():
+                elif "values" in last_lower:
                     message = "o que é o teia values"
-                elif "edi" in last_user_question.lower():
+                elif "edi" in last_lower:
                     message = "o que é edi"
-                elif "bpo" in last_user_question.lower():
+                elif "bpo" in last_lower:
                     message = "o que é bpo financeiro"
-            elif "chargeback" in last_user_question.lower() or "estorno" in last_user_question.lower():
-                if "que pena" in message.lower() or "poxa" in message.lower() or "é triste" in message.lower():
+            elif any(word in last_lower for word in ["chargeback", "estorno"]):
+                if any(word in msg_lower for word in ["que pena", "poxa", "é triste"]):
                     message = "como reduzir chargebacks"
-            elif "erp" in last_user_question.lower() and "não integra" in last_user_question.lower():
-                if "e" in message.lower() or "e ai" in message.lower() or "e o" in message.lower():
+            elif "erp" in last_lower and "não integra" in last_lower:
+                if any(word in msg_lower for word in ["e", "e ai", "e o"]):
                     message = "quais erps a netunna integra"
-            elif "bancos" in last_user_question.lower():
-                if "e" in message.lower() or "e os" in message.lower():
+            elif "bancos" in last_lower:
+                if any(word in msg_lower for word in ["e", "e os"]):
                     message = "quais adquirentes a netunna integra"
 
         # ✅ 2. FILTRO DE CONTEXTOS ABSURDOS
         if is_absurd_context(message):
-            filtered_response = ("Prefiro focar em ajudar com conciliação, EDI, BPO e nossos produtos. "
-                                 "Posso te ajudar com algo nessa área?")
+            filtered_response = (
+                "Prefiro focar em ajudar com conciliação, EDI, BPO e nossos produtos. "
+                "Posso te ajudar com algo nessa área?"
+            )
             conversation_id = get_or_create_conversation(user_id, connection)
             log_message(conversation_id, message, True, connection)
             log_message(conversation_id, filtered_response, False, connection)
@@ -276,8 +504,9 @@ def get_chat_response(message, user_id, last_user_question=None):
                 conversation_id = get_or_create_conversation(user_id, connection)
                 log_message(conversation_id, message, True, connection)
                 log_message(conversation_id, result['answer'], False, connection)
+                final_answer = response_prefix + result['answer'] if response_prefix else result['answer']
                 return {
-                    'response': result['answer'],
+                    'response': final_answer,
                     'intent': result['category'],
                     'confidence': 0.95
                 }
@@ -327,18 +556,42 @@ def get_chat_response(message, user_id, last_user_question=None):
         # ✅ 9. SE ENCONTROU RESPOSTA NO BANCO
         if result:
             log_message(conversation_id, result['answer'], False, connection)
+            final_answer = response_prefix + result['answer'] if response_prefix else result['answer']
             return {
-                'response': result['answer'],
+                'response': final_answer,
                 'intent': result['category'],
                 'confidence': 0.9
             }
 
-        # ✅ 10. RESPOSTA PADRÃO SEGURA — NUNCA EXPOE DADOS
-        default_response = ("Desculpe, ainda não sei responder isso. "
-                            "Pergunte sobre conciliação, EDI, BPO ou nossos produtos!")
-        log_message(conversation_id, default_response, False, connection)
+        # ✅ 10. NÍVEL 3: APRENDIZADO ATIVO — Registra perguntas não respondidas
+        unknown_question = message.strip()
+        cursor.execute("""
+            SELECT id FROM unknown_questions 
+            WHERE question = %s AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+        """, (unknown_question,))
+        if not cursor.fetchone():
+            cursor.execute("""
+                INSERT INTO unknown_questions (user_id, question, conversation_id, status)
+                VALUES (%s, %s, %s, 'pending')
+            """, (user_id, unknown_question, conversation_id))
+            connection.commit()
+
+        # ✅ 11. RESPOSTA PADRÃO SEGURA — Com sugestão baseada no contexto
+        if last_user_question and "teia card" in last_user_question.lower():
+            suggestion = "Quer saber mais sobre o Teia Card?"
+        elif "bpo" in last_user_question.lower():
+            suggestion = "Posso te explicar a diferença entre BPO Técnico e Premium?"
+        elif "edi" in last_user_question.lower():
+            suggestion = "Precisa de ajuda com integração via SFTP ou VAN?"
+        else:
+            suggestion = "Posso te ajudar a esclarecer melhor?"
+
+        default_response = f"Desculpe, ainda não sei responder isso. {suggestion}"
+        final_response = response_prefix + default_response if response_prefix else default_response
+        log_message(conversation_id, final_response, False, connection)
+
         return {
-            'response': default_response,
+            'response': final_response,
             'intent': 'unknown',
             'confidence': 0.1
         }
@@ -351,6 +604,53 @@ def get_chat_response(message, user_id, last_user_question=None):
             cursor.close()
         if connection and connection.is_connected():
             connection.close()
+
+
+def get_or_create_user_profile(user_id, connection):
+    """Obtém ou cria perfil de usuário"""
+    cursor = None
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM user_profiles WHERE user_id = %s", (user_id,))
+        profile = cursor.fetchone()
+        if not profile:
+            cursor.execute("""
+                INSERT INTO user_profiles (user_id, name, company, erp, adquirente, last_issue)
+                VALUES (%s, NULL, NULL, NULL, NULL, NULL)
+            """, (user_id,))
+            connection.commit()
+            return {
+                'user_id': user_id,
+                'name': None,
+                'company': None,
+                'erp': None,
+                'adquirente': None,
+                'last_issue': None
+            }
+        return profile
+    except Error as e:
+        logger.error(f"Erro ao buscar perfil: {e}")
+        return {'user_id': user_id}
+    finally:
+        if cursor:
+            cursor.close()
+
+
+def update_user_profile(user_id, updates, connection):
+    """Atualiza perfil do usuário"""
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
+        values = list(updates.values()) + [user_id]
+        query = f"UPDATE user_profiles SET {set_clause}, updated_at = NOW() WHERE user_id = %s"
+        cursor.execute(query, values)
+        connection.commit()
+    except Error as e:
+        logger.error(f"Erro ao atualizar perfil: {e}")
+    finally:
+        if cursor:
+            cursor.close()
 
 
 def get_or_create_conversation(user_id, connection):
@@ -381,10 +681,7 @@ def log_message(conversation_id, message, is_from_user, connection):
     cursor = None
     try:
         cursor = connection.cursor()
-        query = """
-        INSERT INTO messages (conversation_id, message_text, is_from_user, sent_at) 
-        VALUES (%s, %s, %s, NOW())
-        """
+        query = "INSERT INTO messages (conversation_id, message_text, is_from_user, sent_at) VALUES (%s, %s, %s, NOW())"
         cursor.execute(query, (conversation_id, message, is_from_user))
         connection.commit()
     except Error as e:
