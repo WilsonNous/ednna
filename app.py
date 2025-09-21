@@ -292,18 +292,75 @@ def get_chat_response(message, user_id, last_user_question=None):
         prefix = f"Olá, {name}! " if name else ""
         if company: prefix += f"Da {company}, certo? "
 
-        # Detecta nome/empresa/ERP
-        if not name and ('me chamo' in msg_low or 'meu nome é' in msg_low):
-            match = re.search(r"(?:me chamo|meu nome é)\s+(\w+)", msg_low)
-            if match: update_user_profile(user_id, {'name': match.group(1).title()}, conn)
-        if not company and ('trabalho na' in msg_low or 'empresa' in msg_low):
-            match = re.search(r"(?:trabalho na|empresa)\s+(\w+)", msg_low)
-            if match: update_user_profile(user_id, {'company': match.group(1).title()}, conn)
-        if not erp:
-            for e in ['totvs', 'sap', 'rm', 'protheus', 'oracle']:
-                if e in msg_low:
-                    update_user_profile(user_id, {'erp': e.upper()}, conn);
+        # 🔹 DETECÇÃO INTELIGENTE DE PERFIL DO USUÁRIO
+        profile_updates = {}
+
+        # 1. Detecta nome com múltiplas variações
+        if not name:
+            patterns_nome = [
+                r"\b(?:me\s+chamo|meu\s+nome\s+é|sou|eu\s+sou|aqu(i|í)\s+é)\s+([A-Za-z]+)",
+                r"\b([A-Za-z]+)\s+(?:aqui|reportando)"
+            ]
+            for pattern in patterns_nome:
+                match = re.search(pattern, msg_low)
+                if match:
+                    profile_updates['name'] = match.group(2).title()
+                    logger.info(f"[Perfil] Nome detectado via padrão '{pattern}': {profile_updates['name']}")
                     break
+
+        # 2. Detecta empresa com contexto
+        if not company:
+            patterns_empresa = [
+                r"\b(?:trabalho\s+na|sou\s+da|faco\s+parte\s+da|empresa\s+)([A-Za-z]+)",
+                r"\b([A-Za-z]+)\s+(?:grupo|holdings?|institui[çc]ão|hospital|editora|óticas|lojas?)\b"
+            ]
+            for pattern in patterns_empresa:
+                match = re.search(pattern, msg_low)
+                if match:
+                    company_name = match.group(1).title()
+                    # Normaliza nomes conhecidos
+                    company_map = {
+                        'Damyller': 'Damyller',
+                        'Felicio': 'Hospital Felício Rocho',
+                        'Puc': 'PUC RS',
+                        'Modernaa': 'Editora Moderna'
+                    }
+                    company_name = company_map.get(company_name, company_name)
+                    profile_updates['company'] = company_name
+                    break
+
+        # 3. Detecta ERP com maior cobertura
+        if not erp:
+            erp_map = {
+                'totvs': 'TOTVS',
+                'protheus': 'TOTVS',
+                'flex': 'TOTVS',
+                'rm': 'TOTVS',
+                'siga': 'TOTVS',
+                'sap': 'SAP',
+                'business one': 'SAP',
+                'b1': 'SAP',
+                'oracle': 'ORACLE',
+                'netsuite': 'ORACLE',
+                'sankhya': 'SANKHYA',
+                'microsiga': 'SANKHYA'
+            }
+            msg_for_erp = msg_low.replace('-', ' ')
+            for key, value in erp_map.items():
+                if key in msg_for_erp:
+                    profile_updates['erp'] = value
+                    break
+
+        # 4. Atualiza perfil em uma única operação
+        if profile_updates:
+            update_user_profile(user_id, profile_updates, conn)
+            # Atualiza variáveis locais para uso imediato na resposta
+            if 'name' in profile_updates:
+                name = profile_updates['name']
+            if 'company' in profile_updates:
+                company = profile_updates['company']
+            if 'erp' in profile_updates:
+                erp = profile_updates['erp']
 
         # Contexto curto
         if len(message.split()) <= 2 and last_user_question:
