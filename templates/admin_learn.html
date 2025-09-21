@@ -1,0 +1,136 @@
+<!-- templates/admin_learn.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Ensinar Ednna | Netunna</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 20px;
+            background-color: #f7f9fc;
+            color: #333;
+        }
+        h1 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .card p {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .empty {
+            text-align: center;
+            color: #777;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Ensinar Ednna</h1>
+
+    {% if questions and questions|length > 0 %}
+        {% for q in questions %}
+        <div class="card" id="question-{{ q.id }}">
+            <p><strong>Usuário {{ q.user_id }}:</strong> "{{ q.question }}"</p>
+            <form class="teach-form" data-question="{{ q.question }}">
+                <input type="text" value="{{ q.question }}" required readonly style="background:#f0f0f0;">
+                <textarea placeholder="Digite a resposta correta aqui..." rows="4" required></textarea>
+                <select required>
+                    <option value="">Selecione uma categoria</option>
+                    <option value="teia_card">Teia Card</option>
+                    <option value="teia_values">Teia Values</option>
+                    <option value="edi">EDI</option>
+                    <option value="bpo">BPO Financeiro</option>
+                    <option value="conectividade">Conectividade</option>
+                    <option value="empresa">Empresa</option>
+                    <option value="suporte">Suporte</option>
+                    <option value="implementação">Implementação</option>
+                </select>
+                <button type="submit">✅ Ensinar Ednna</button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty">
+            <p>Nenhuma pergunta pendente no momento.</p>
+            <p>A Ednna está aprendendo bem! 🎉</p>
+        </div>
+    {% endif %}
+
+    <script>
+        document.querySelectorAll('.teach-form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const inputs = form.querySelectorAll('input, textarea, select');
+                const question = inputs[0].value.trim();
+                const answer = inputs[1].value.trim();
+                const category = inputs[2].value.trim();
+
+                if (!answer || !category) {
+                    alert("Por favor, preencha todos os campos.");
+                    return;
+                }
+
+                const res = await fetch('/admin/teach', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, answer, category })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert('✅ Ednna aprendeu com sucesso!');
+                    form.closest('.card')?.remove();
+                    if (document.querySelectorAll('.card').length === 0) {
+                        document.body.innerHTML += `
+                            <div class="empty">
+                                <p>Todas as perguntas foram respondidas! Ótimo trabalho! 🌟</p>
+                            </div>`;
+                    }
+                } else {
+                    alert('❌ Erro: ' + (data.error || 'Não foi possível salvar'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
