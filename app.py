@@ -105,7 +105,7 @@ def health_check():
 def chat():
     try:
         data = request.get_json()
-        if not  data:  # ✅ Corrigido: agora tem condição
+        if not data:  # ✅ Corrigido: agora tem condição
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 1)
@@ -121,7 +121,8 @@ def chat():
             'timestamp': str(datetime.now())
         })
 
-        last_question = session['conversation_history'][-2]['text'] if len(session['conversation_history']) > 1 else None
+        last_question = session['conversation_history'][-2]['text'] if len(
+            session['conversation_history']) > 1 else None
         response = get_chat_response(user_message, user_id, last_question)
 
         session['conversation_history'].append({
@@ -172,7 +173,8 @@ def learn_dashboard():
         WHERE status = 'pending' ORDER BY created_at DESC LIMIT 50
     """)
     questions = cursor.fetchall()
-    cursor.close(); conn.close()
+    cursor.close();
+    conn.close()
 
     return render_template('admin_learn.html', questions=questions)
 
@@ -202,7 +204,8 @@ def teach_ednna():
         conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close(); conn.close()
+        cursor.close();
+        conn.close()
 
 
 # === FUNÇÕES AUXILIARES ===
@@ -251,7 +254,8 @@ def get_or_create_conversation(user_id, connection):
         cursor.execute(query, (user_id,))
         result = cursor.fetchone()
         if result: return result[0]
-        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')", (user_id,))
+        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')",
+                       (user_id,))
         connection.commit()
         return cursor.lastrowid
     except Error as e:
@@ -284,30 +288,80 @@ def get_chat_response(message, user_id, last_user_question=None):
         cursor = conn.cursor(dictionary=True)
         msg_low = message.strip().lower()
 
-        # Saudações
-        saudacoes = ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem']
-        if any(s in msg_low for s in saudacoes):
-            cursor.execute("SELECT answer FROM knowledge_base WHERE category='saudacao' LIMIT 1")
-            result = cursor.fetchone()
-            if result:
-                cid = get_or_create_conversation(user_id, conn)
-                log_message(cid, message, True, conn)
-                log_message(cid, result['answer'], False, conn)
-                return {'response': result['answer'], 'intent': 'saudacao', 'confidence': 0.95}
+        # ✅ SAUDAÇÕES INTELIGENTES E CONTEXTUAIS
+        saudacoes = ['oi', 'olá', 'oie', 'eai', 'e aí', 'salve', 'hello', 'hi']
+        cumprimentos = ['bom dia', 'boa tarde', 'boa noite']
+        perguntas_bemestar = ['tudo bem', 'como vai', 'como está', 'como tem passado']
+
+        msg_clean = re.sub(r'[?!]', '', msg_low).strip()
+
+        # Carrega perfil do usuário
+        profile = get_or_create_user_profile(user_id, conn) or {}
+        name = profile.get('name')
+
+        # Prefixo para respostas
+        nome_usuario = f"{name}" if name else "você"
+
+        # 1. Se for "tudo bem?", responda com empatia
+        if any(p in msg_clean for p in perguntas_bemestar):
+            resposta = f"Comigo está tudo bem, obrigada por perguntar! E com {nome_usuario}? Como posso te ajudar hoje?"
+            cid = get_or_create_conversation(user_id, conn)
+            log_message(cid, message, True, conn)
+            log_message(cid, resposta, False, conn)
+            return {'response': resposta, 'intent': 'saudacao', 'confidence': 0.95}
+
+        # 2. Se for cumprimento formal (bom dia/tarde/noite)
+        elif any(c in msg_clean for c in cumprimentos):
+            if name:
+                resposta = f"Bom dia, {name}! Como posso te ajudar hoje?" \
+                    if "bom dia" in msg_clean else \
+                    f"Boa tarde, {name}! Como posso te ajudar?" \
+                        if "boa tarde" in msg_clean else \
+                        f"Boa noite, {name}! Posso te ajudar com algo antes de dormir?"
+            else:
+                resposta = "Bom dia! Como posso te ajudar hoje?" \
+                    if "bom dia" in msg_clean \
+                    else "Boa tarde! Como posso te ajudar?" \
+                    if "boa tarde" in msg_clean \
+                    else "Boa noite! Posso te ajudar com algo antes de dormir?"
+
+            cid = get_or_create_conversation(user_id, conn)
+            log_message(cid, message, True, conn)
+            log_message(cid, resposta, False, conn)
+            return {'response': resposta, 'intent': 'saudacao', 'confidence': 0.95}
+
+        # 3. Se for "oi", "olá", etc.
+        elif any(s in msg_clean for s in saudacoes):
+            if name:
+                resposta = f"Olá, {name}! Tudo bem? Como posso te ajudar hoje?"
+            else:
+                # Usa a saudação do banco apenas se for primeira vez
+                cursor.execute("SELECT answer FROM knowledge_base WHERE category = 'saudacao' ORDER BY id LIMIT 1")
+                result = cursor.fetchone()
+                resposta = result['answer'] if result else "Olá! Como posso te ajudar hoje?"
+
+            cid = get_or_create_conversation(user_id, conn)
+            log_message(cid, message, True, conn)
+            log_message(cid, resposta, False, conn)
+            return {'response': resposta, 'intent': 'saudacao', 'confidence': 0.95}
 
         # Despedidas
-        despedidas = ['tchau', 'até logo', 'obrigado', 'valeu', 'falou', 'até mais', 'vou sair', 'encerrar', 'finalizar']
+        despedidas = ['tchau', 'até logo', 'obrigado', 'valeu', 'falou', 'até mais', 'vou sair', 'encerrar',
+                      'finalizar']
         if any(d in msg_low for d in despedidas):
             profile = get_or_create_user_profile(user_id, conn) or {}
             name = profile.get('name')
             resposta = f"Tchau, {name}! Foi um prazer te ajudar." if name else "Tchau! Fico à disposição para ajudar."
             cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
+            log_message(cid, message, True, conn);
+            log_message(cid, resposta, False, conn)
             return {'response': resposta, 'intent': 'despedida', 'confidence': 0.95}
 
         # Perfil do usuário
         profile = get_or_create_user_profile(user_id, conn) or {}
-        name = profile.get('name'); company = profile.get('company'); erp = profile.get('erp')
+        name = profile.get('name');
+        company = profile.get('company');
+        erp = profile.get('erp')
         prefix = f"Olá, {name}! " if name else ""
         if company: prefix += f"Da {company}, certo? "
 
@@ -371,8 +425,10 @@ def get_chat_response(message, user_id, last_user_question=None):
         if len(message.split()) <= 2 and last_user_question:
             last_low = last_user_question.lower()
             if "teia" in last_low:
-                if "card" in last_low: message = "o que é o teia card"
-                elif "values" in last_low: message = "o que é o teia values"
+                if "card" in last_low:
+                    message = "o que é o teia card"
+                elif "values" in last_low:
+                    message = "o que é o teia values"
             elif any(w in last_low for w in ["chargeback", "estorno"]):
                 if any(w in msg_low for w in ["que pena", "poxa"]): message = "como reduzir chargebacks"
 
@@ -380,13 +436,15 @@ def get_chat_response(message, user_id, last_user_question=None):
         if is_absurd_context(message):
             resp = "Prefiro focar em conciliação, EDI, BPO. Posso te ajudar com algo nessa área?"
             cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn); log_message(cid, resp, False, conn)
+            log_message(cid, message, True, conn);
+            log_message(cid, resp, False, conn)
             return {'response': resp, 'intent': 'filtered', 'confidence': 0.99}
 
         if is_offensive_or_absurd(message):
             resp = get_appropriate_response_for_offensive(message)
             cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn); log_message(cid, resp, False, conn)
+            log_message(cid, message, True, conn);
+            log_message(cid, resp, False, conn)
             return {'response': resp, 'intent': 'filtered', 'confidence': 0.99}
 
         # Busca normalizada
@@ -413,7 +471,8 @@ def get_chat_response(message, user_id, last_user_question=None):
         if result:
             cid = get_or_create_conversation(user_id, conn)
             full_answer = prefix + result['answer'] if prefix else result['answer']
-            log_message(cid, message, True, conn); log_message(cid, full_answer, False, conn)
+            log_message(cid, message, True, conn);
+            log_message(cid, full_answer, False, conn)
             return {'response': full_answer, 'intent': result['category'], 'confidence': 0.9}
 
         # Aprendizado ativo
@@ -462,5 +521,3 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-    
-
