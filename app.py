@@ -471,14 +471,23 @@ def get_chat_response(message, user_id, last_user_question=None):
         if result:
             cid = get_or_create_conversation(user_id, conn)
 
-            # Só usa saudação se for primeira interação ou pergunta direta
-            saudacao_necessaria = any(word in msg_low for word in ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem'])
+            # Verifica se é uma nova interação ou saudação
+            saudacao_necessaria = any(
+                word in msg_low for word in ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem', 'e aí'])
 
             if saudacao_necessaria and name:
+                # Usa "Olá, Wilson!" só em saudações
                 resposta_final = f"Olá, {name}! {result['answer']}"
+            elif saudacao_necessaria:
+                # Saudação sem nome
+                resposta_final = result['answer']
             elif name:
-                resposta_final = f"Com certeza, {name}! {result['answer']}"
+                # Continuação natural da conversa: usa o nome apenas se agregar valor
+                resposta_final = f"{name}, {result['answer'].capitalize()}"  # Ex: "Wilson, EDI é a troca..."
+                # Ou, para ser mais neutro:
+                # resposta_final = result['answer']
             else:
+                # Resposta padrão
                 resposta_final = result['answer']
 
             log_message(cid, message, True, conn)
