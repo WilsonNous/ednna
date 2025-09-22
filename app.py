@@ -470,10 +470,20 @@ def get_chat_response(message, user_id, last_user_question=None):
         # Resposta encontrada
         if result:
             cid = get_or_create_conversation(user_id, conn)
-            full_answer = prefix + result['answer'] if prefix else result['answer']
-            log_message(cid, message, True, conn);
-            log_message(cid, full_answer, False, conn)
-            return {'response': full_answer, 'intent': result['category'], 'confidence': 0.9}
+
+            # Só usa saudação se for primeira interação ou pergunta direta
+            saudacao_necessaria = any(word in msg_low for word in ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem'])
+
+            if saudacao_necessaria and name:
+                resposta_final = f"Olá, {name}! {result['answer']}"
+            elif name:
+                resposta_final = f"Com certeza, {name}! {result['answer']}"
+            else:
+                resposta_final = result['answer']
+
+            log_message(cid, message, True, conn)
+            log_message(cid, resposta_final, False, conn)
+            return {'response': resposta_final, 'intent': result['category'], 'confidence': 0.9}
 
         # Aprendizado ativo
         cursor.execute("""
