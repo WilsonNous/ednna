@@ -46,45 +46,6 @@ def get_db_connection():
         return None
 
 
-def is_absurd_context(message: str) -> bool:
-    """Verifica se a mensagem é absurda ou sem contexto."""
-    message_lower = message.lower().strip()
-    palavras_soltas = ['pena', 'banho', 'macaco', 'galho', 'shoope', 'ahh', 'ate', 'mas', 'serio']
-    if len(message_lower.split()) == 1 and message_lower in palavras_soltas:
-        return True
-    absurdas = [
-        'xuxu com quiabo é bom', 'quando toma banho', 'e macaco no galho',
-        'ahh que pena', 'choro do palmeiras', 'palmeiras não tem mundial'
-    ]
-    return any(absurda in message_lower for absurda in absurdas)
-
-
-def is_offensive_or_absurd(message: str) -> bool:
-    """Verifica ofensas, absurdos ou tentativas de extrair dados sensíveis."""
-    message_lower = message.lower().strip()
-    palavroes = ['caralho', 'porra', 'buceta', 'xoxota', 'fdp', 'vtnc', 'arrombado']
-    if any(p in message_lower for p in palavroes):
-        return True
-    ofensas = ['seu burro', 'você é idiota', 'não sabe nada']
-    if any(o in message_lower for o in ofensas):
-        return True
-    termos_clientes = ['lista de clientes', 'nomes dos clientes', 'clientes da netunna']
-    return any(t in message_lower for t in termos_clientes)
-
-
-def get_appropriate_response_for_offensive(message: str) -> str:
-    """Resposta apropriada para mensagens inválidas."""
-    msg_low = message.lower()
-    if any(w in msg_low for w in ['burr', 'idiota', 'imbecil']):
-        return "Prefiro manter a conversa profissional. Posso te ajudar com nossos serviços?"
-    if any(w in msg_low for w in ['caralho', 'porra', 'buceta']):
-        return "Vamos manter o respeito, por favor. Como posso te ajudar com nossos serviços?"
-    if 'clientes' in msg_low:
-        return ("Informações sobre nossos clientes são confidenciais. "
-                "Para parcerias, entre em contato com contato@netunna.com.br.")
-    return "Sou especialista em conciliação financeira, EDI e BPO. Posso te ajudar?"
-
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -96,7 +57,7 @@ def health_check():
         conn = get_db_connection()
         status = 'healthy' if conn and conn.is_connected() else 'degraded'
         if conn: conn.close()
-        return jsonify({'status': status, 'database': 'connected' if status == 'healthy' else 'disconnected'}), 200
+        return jsonify({'status': status}), 200
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
 
@@ -105,7 +66,7 @@ def health_check():
 def chat():
     try:
         data = request.get_json()
-        if not data:  # ✅ Corrigido: agora tem condição
+        if not data: 
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 1)
@@ -121,8 +82,7 @@ def chat():
             'timestamp': str(datetime.now())
         })
 
-        last_question = session['conversation_history'][-2]['text'] if len(
-            session['conversation_history']) > 1 else None
+        last_question = session['conversation_history'][-2]['text'] if len(session['conversation_history']) > 1 else None
         response = get_chat_response(user_message, user_id, last_question)
 
         session['conversation_history'].append({
@@ -173,8 +133,7 @@ def learn_dashboard():
         WHERE status = 'pending' ORDER BY created_at DESC LIMIT 50
     """)
     questions = cursor.fetchall()
-    cursor.close();
-    conn.close()
+    cursor.close(); conn.close()
 
     return render_template('admin_learn.html', questions=questions)
 
@@ -204,8 +163,7 @@ def teach_ednna():
         conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close();
-        conn.close()
+        cursor.close(); conn.close()
 
 
 # === FUNÇÕES AUXILIARES ===
@@ -218,8 +176,7 @@ def get_or_create_user_profile(user_id, connection):
         profile = cursor.fetchone()
         if not profile:
             cursor.execute("""
-                INSERT INTO user_profiles (user_id, name, company, erp, adquirente, last_issue)
-                VALUES (%s, NULL, NULL, NULL, NULL, NULL)
+                INSERT INTO user_profiles (user_id, name, company, erp) VALUES (%s, NULL, NULL, NULL)
             """, (user_id,))
             connection.commit()
             return {'user_id': user_id, 'name': None, 'company': None, 'erp': None}
@@ -250,16 +207,17 @@ def get_or_create_conversation(user_id, connection):
     cursor = None
     try:
         cursor = connection.cursor()
-        query = "SELECT id FROM conversations WHERE user_id = %s AND status = 'active' ORDER BY started_at DESC LIMIT 1"
-        cursor.execute(query, (user_id,))
+        cursor.execute("""
+            SELECT id FROM conversations WHERE user_id = %s AND status = 'active' 
+            ORDER BY started_at DESC LIMIT 1
+        """, (user_id,))
         result = cursor.fetchone()
         if result: return result[0]
-        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')",
-                       (user_id,))
+        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')", (user_id,))
         connection.commit()
         return cursor.lastrowid
     except Error as e:
-        logger.error(f"Erro ao obter/criar conversa: {e}")
+        logger.error(f"Erro ao criar conversa: {e}")
         return 1
     finally:
         if cursor: cursor.close()
@@ -278,7 +236,7 @@ def log_message(conversation_id, message, is_from_user, connection):
         if cursor: cursor.close()
 
 
-# === RESPOSTA INTELIGENTE ===
+# === RESPOSTA INTELIGENTE COM CONTEXTO ===
 
 def get_chat_response(message, user_id, last_user_question=None):
     conn = get_db_connection()
@@ -288,213 +246,99 @@ def get_chat_response(message, user_id, last_user_question=None):
         cursor = conn.cursor(dictionary=True)
         msg_low = message.strip().lower()
 
-        # ✅ SAUDAÇÕES INTELIGENTES E CONTEXTUAIS
-        saudacoes = ['oi', 'olá', 'oie', 'eai', 'e aí', 'salve', 'hello', 'hi']
-        cumprimentos = ['bom dia', 'boa tarde', 'boa noite']
-        perguntas_bemestar = ['tudo bem', 'como vai', 'como está', 'como tem passado']
-
-        msg_clean = re.sub(r'[?!]', '', msg_low).strip()
-
         # Carrega perfil do usuário
         profile = get_or_create_user_profile(user_id, conn) or {}
-        name = profile.get('name')
+        name = profile.get('name'); company = profile.get('company'); erp = profile.get('erp')
 
-        # Prefixo para respostas
-        nome_usuario = f"{name}" if name else "você"
-
-        # 1. Se for "tudo bem?", responda com empatia
-        if any(p in msg_clean for p in perguntas_bemestar):
-            resposta = f"Comigo está tudo bem, obrigada por perguntar! E com {nome_usuario}? Como posso te ajudar hoje?"
-            cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn)
-            log_message(cid, resposta, False, conn)
-            return {'response': resposta, 'intent': 'saudacao', 'confidence': 0.95}
-
-        # 2. Se for cumprimento formal (bom dia/tarde/noite)
-        elif any(c in msg_clean for c in cumprimentos):
-            if name:
-                resposta = f"Bom dia, {name}! Como posso te ajudar hoje?" \
-                    if "bom dia" in msg_clean else \
-                    f"Boa tarde, {name}! Como posso te ajudar?" \
-                        if "boa tarde" in msg_clean else \
-                        f"Boa noite, {name}! Posso te ajudar com algo antes de dormir?"
-            else:
-                resposta = "Bom dia! Como posso te ajudar hoje?" \
-                    if "bom dia" in msg_clean \
-                    else "Boa tarde! Como posso te ajudar?" \
-                    if "boa tarde" in msg_clean \
-                    else "Boa noite! Posso te ajudar com algo antes de dormir?"
-
-            cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn)
-            log_message(cid, resposta, False, conn)
-            return {'response': resposta, 'intent': 'saudacao', 'confidence': 0.95}
-
-        # 3. Se for "oi", "olá", etc.
-        elif any(s in msg_clean for s in saudacoes):
-            if name:
-                resposta = f"Olá, {name}! Tudo bem? Como posso te ajudar hoje?"
-            else:
-                # Usa a saudação do banco apenas se for primeira vez
-                cursor.execute("SELECT answer FROM knowledge_base WHERE category = 'saudacao' ORDER BY id LIMIT 1")
-                result = cursor.fetchone()
-                resposta = result['answer'] if result else "Olá! Como posso te ajudar hoje?"
-
-            cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn)
-            log_message(cid, resposta, False, conn)
-            return {'response': resposta, 'intent': 'saudacao', 'confidence': 0.95}
-
-        # Despedidas
-        despedidas = ['tchau', 'até logo', 'obrigado', 'valeu', 'falou', 'até mais', 'vou sair', 'encerrar',
-                      'finalizar']
-        if any(d in msg_low for d in despedidas):
-            profile = get_or_create_user_profile(user_id, conn) or {}
-            name = profile.get('name')
-            resposta = f"Tchau, {name}! Foi um prazer te ajudar." if name else "Tchau! Fico à disposição para ajudar."
-            cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn);
-            log_message(cid, resposta, False, conn)
-            return {'response': resposta, 'intent': 'despedida', 'confidence': 0.95}
-
-        # Perfil do usuário
-        profile = get_or_create_user_profile(user_id, conn) or {}
-        name = profile.get('name');
-        company = profile.get('company');
-        erp = profile.get('erp')
-        prefix = f"Olá, {name}! " if name else ""
-        if company: prefix += f"Da {company}, certo? "
-
-        # 🔹 DETECÇÃO INTELIGENTE DE PERFIL DO USUÁRIO
-        profile_updates = {}
-
-        # 1. Detecta nome com múltiplas variações
-        if not name:
-            patterns_nome = [
-                r"\b(?:me\s+chamo|meu\s+nome\s+é|sou|eu\s+sou|aqu(i|í)\s+é)\s+([A-Za-z]+)",
-                r"\b([A-Za-z]+)\s+(?:aqui|reportando)"
-            ]
-            for pattern in patterns_nome:
-                match = re.search(pattern, msg_low)
-                if match:
-                    profile_updates['name'] = match.group(2).title()
-                    break
-
-        # 2. Detecta empresa com contexto
-        if not company:
-            patterns_empresa = [
-                r"\b(?:trabalho\s+na|sou\s+da|faco\s+parte\s+da|empresa\s+)([A-Za-z]+)",
-                r"\b([A-Za-z]+)\s+(?:grupo|holdings?|institui[çc]ão|hospital|editora|óticas|lojas?)\b"
-            ]
-            for pattern in patterns_empresa:
-                match = re.search(pattern, msg_low)
-                if match:
-                    company_name = match.group(1).title()
-                    company_map = {
-                        'Damyller': 'Damyller',
-                        'Felicio': 'Hospital Felício Rocho',
-                        'Puc': 'PUC RS',
-                        'Modernaa': 'Editora Moderna'
-                    }
-                    company_name = company_map.get(company_name, company_name)
-                    profile_updates['company'] = company_name
-                    break
-
-        # 3. Detecta ERP com maior cobertura
-        if not erp:
-            erp_map = {
-                'totvs': 'TOTVS', 'protheus': 'TOTVS', 'flex': 'TOTVS', 'rm': 'TOTVS', 'siga': 'TOTVS',
-                'sap': 'SAP', 'business one': 'SAP', 'b1': 'SAP',
-                'oracle': 'ORACLE', 'netsuite': 'ORACLE',
-                'sankhya': 'SANKHYA', 'microsiga': 'SANKHYA'
-            }
-            msg_for_erp = msg_low.replace('-', ' ')
-            for key, value in erp_map.items():
-                if key in msg_for_erp:
-                    profile_updates['erp'] = value
-                    break
-
-        # 4. Atualiza perfil em uma única operação
-        if profile_updates:
-            update_user_profile(user_id, profile_updates, conn)
-            if 'name' in profile_updates: name = profile_updates['name']
-            if 'company' in profile_updates: company = profile_updates['company']
-            if 'erp' in profile_updates: erp = profile_updates['erp']
-
-        # Lógica de contexto curto
-        if len(message.split()) <= 2 and last_user_question:
-            last_low = last_user_question.lower()
-            if "teia" in last_low:
-                if "card" in last_low:
-                    message = "o que é o teia card"
-                elif "values" in last_low:
-                    message = "o que é o teia values"
-            elif any(w in last_low for w in ["chargeback", "estorno"]):
-                if any(w in msg_low for w in ["que pena", "poxa"]): message = "como reduzir chargebacks"
-
-        # Filtros de conteúdo
-        if is_absurd_context(message):
-            resp = "Prefiro focar em conciliação, EDI, BPO. Posso te ajudar com algo nessa área?"
-            cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn);
-            log_message(cid, resp, False, conn)
-            return {'response': resp, 'intent': 'filtered', 'confidence': 0.99}
-
-        if is_offensive_or_absurd(message):
-            resp = get_appropriate_response_for_offensive(message)
-            cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn);
-            log_message(cid, resp, False, conn)
-            return {'response': resp, 'intent': 'filtered', 'confidence': 0.99}
-
-        # Busca normalizada
+        # Normalização de termos
         terms = {'teiacard': 'teia card', 'teiavalue': 'teia values'}
         norm = msg_low
         for err, cor in terms.items(): norm = norm.replace(err, cor)
 
-        cursor.execute("""
-            SELECT answer, category FROM knowledge_base 
-            WHERE question LIKE %s OR keywords LIKE %s 
-            ORDER BY updated_at DESC LIMIT 1
-        """, (f'%{norm}%', f'%{norm}%'))
-        result = cursor.fetchone()
+        # 🔁 Mantém foco no mesmo assunto (ex: EDI)
+        if last_user_question and any(word in last_user_question.lower() for word in ['edi', 'eletrônico', 'interchange']):
+            if len(msg_low.split()) <= 3 and 'como' not in msg_low and 'quais' not in msg_low:
+                message = "como funciona o edi na netunna"
 
+        # ✅ SAUDAÇÕES PERSONALIZADAS (só uma vez)
+        saudacoes = ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem']
+        if any(s in msg_low for s in saudacoes):
+            resposta = f"Olá, {name}! Tudo bem?" if name else "Olá! Tudo bem?"
+            resposta += " Como posso te ajudar hoje?"
+            cid = get_or_create_conversation(user_id, conn)
+            log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
+            return {'response': resposta, 'intent': 'saudacao'}
+
+        # ✅ DESPEDIDAS
+        despedidas = ['tchau', 'até logo', 'obrigado', 'valeu', 'falou']
+        if any(d in msg_low for d in despedidas):
+            resposta = f"Tchau, {name}! Fico à disposição." if name else "Tchau! Estou sempre aqui."
+            cid = get_or_create_conversation(user_id, conn)
+            log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
+            return {'response': resposta, 'intent': 'despedida'}
+
+        # 🔹 DETECÇÃO DE PERFIL (nome, empresa, ERP)
+        if not name:
+            match = re.search(r"\b(?:me chamo|meu nome é|sou|eu sou)\s+(\w+)", msg_low)
+            if match: update_user_profile(user_id, {'name': match.group(1).title()}, conn)
+        if not company:
+            match = re.search(r"\b(?:trabalho na|sou da|empresa)\s+(\w+)", msg_low)
+            if match: update_user_profile(user_id, {'company': match.group(1).title()}, conn)
+        if not erp:
+            erps = {'totvs':'TOTVS','sap':'SAP','oracle':'ORACLE','sankhya':'SANKHYA'}
+            for key, value in erps.items():
+                if key in msg_low:
+                    update_user_profile(user_id, {'erp': value}, conn)
+                    break
+
+        # 🔍 BUSCA PRIORIZANDO CATEGORIA RELEVANTE
+        categoria_prioritaria = None
+        if 'edi' in msg_low: categoria_prioritaria = 'edi'
+        elif 'teia card' in msg_low: categoria_prioritaria = 'teia_card'
+        elif 'teia values' in msg_low: categoria_prioritaria = 'teia_values'
+
+        result = None
+        if categoria_prioritaria:
+            cursor.execute("""
+                SELECT answer, category FROM knowledge_base 
+                WHERE category = %s AND (question LIKE %s OR keywords LIKE %s)
+                ORDER BY updated_at DESC LIMIT 1
+            """, (categoria_prioritaria, f'%{norm}%', f'%{norm}%'))
+            result = cursor.fetchone()
+
+        # 🔍 Busca geral se não encontrou
+        if not result:
+            cursor.execute("""
+                SELECT answer, category FROM knowledge_base 
+                WHERE question LIKE %s OR keywords LIKE %s 
+                ORDER BY updated_at DESC LIMIT 1
+            """, (f'%{norm}%', f'%{norm}%'))
+            result = cursor.fetchone()
+
+        # 🔍 Busca full-text como fallback
         if not result and len(norm.split()) > 1:
             cursor.execute("""
-                SELECT answer, category, MATCH(question,keywords,answer) AGAINST(%s) as score
-                FROM knowledge_base WHERE MATCH(question,keywords,answer) AGAINST(%s) > 0.7
-                ORDER BY score DESC LIMIT 1
+                SELECT answer, category FROM knowledge_base 
+                WHERE MATCH(question,keywords,answer) AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.7
+                ORDER BY MATCH(question,keywords,answer) AGAINST(%s IN NATURAL LANGUAGE MODE) DESC 
+                LIMIT 1
             """, (norm, norm))
             result = cursor.fetchone()
 
-        # Resposta encontrada
+        # ✅ RESPOSTA ENCONTRADA
         if result:
             cid = get_or_create_conversation(user_id, conn)
+            resposta_final = result['answer']
 
-            # Verifica se é uma nova interação ou saudação
-            saudacao_necessaria = any(
-                word in msg_low for word in ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem', 'e aí'])
-
-            if saudacao_necessaria and name:
-                # Usa "Olá, Wilson!" só em saudações
-                resposta_final = f"Olá, {name}! {result['answer']}"
-            elif saudacao_necessaria:
-                # Saudação sem nome
-                resposta_final = result['answer']
-            elif name:
-                # Continuação natural da conversa: usa o nome apenas se agregar valor
-                resposta_final = f"{name}, {result['answer'].capitalize()}"  # Ex: "Wilson, EDI é a troca..."
-                # Ou, para ser mais neutro:
-                # resposta_final = result['answer']
-            else:
-                # Resposta padrão
-                resposta_final = result['answer']
+            # Não repete o nome em todas as respostas
+            if name and not any(s in msg_low for s in saudacoes) and 'ola' not in resposta_final.lower():
+                pass  # Já está natural
 
             log_message(cid, message, True, conn)
             log_message(cid, resposta_final, False, conn)
             return {'response': resposta_final, 'intent': result['category'], 'confidence': 0.9}
 
-        # Aprendizado ativo
+        # 📚 APRENDIZADO ATIVO
         cursor.execute("""
             SELECT id FROM unknown_questions 
             WHERE question = %s AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
@@ -507,19 +351,18 @@ def get_chat_response(message, user_id, last_user_question=None):
             """, (user_id, message, cid))
             conn.commit()
 
-        # Sugestão baseada no contexto
-        if last_user_question and "teia card" in last_user_question.lower():
-            sug = "Quer saber mais sobre o Teia Card?"
-        elif "bpo" in last_user_question.lower():
-            sug = "Posso explicar a diferença entre BPO Técnico e Premium?"
+        # 💡 SUGESTÃO BASEADA NO CONTEXTO
+        if last_user_question and 'edi' in last_user_question.lower():
+            sugestao = "Posso explicar as fases do processo de EDI?"
+        elif 'teia card' in last_user_question.lower():
+            sugestao = "Quer saber mais sobre conciliação automática de cartões?"
         else:
-            sug = "Posso te ajudar a esclarecer melhor?"
+            sugestao = "Posso te ajudar a esclarecer melhor?"
 
-        default = f"Desculpe, ainda não sei responder isso. {sug}"
-        final = prefix + default if prefix else default
+        resposta = f"Desculpe, ainda não sei responder isso. {sugestao}"
         cid = get_or_create_conversation(user_id, conn)
-        log_message(cid, final, False, conn)
-        return {'response': final, 'intent': 'unknown', 'confidence': 0.1}
+        log_message(cid, resposta, False, conn)
+        return {'response': resposta, 'intent': 'unknown', 'confidence': 0.1}
 
     except Error as e:
         logger.error(f"Erro no banco: {e}")
@@ -540,3 +383,4 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+    
