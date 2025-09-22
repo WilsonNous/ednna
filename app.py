@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ednna Chatbot - Netunna Software
-Backend Flask com MySQL — Nível 2+3: Contexto + Memória de Usuário + Aprendizado Ativo
+Backend Flask com MySQL — Inteligência Contextual + Aprendizado Ativo
 Deploy seguro no Render via GitHub
 """
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'sua-chave-secreta-aqui')
+app.secret_key = os.getenv('SECRET_KEY', 'netunna_secret_key_2025')
 
 # Configuração do banco de dados
 DB_CONFIG = {
@@ -66,7 +66,7 @@ def health_check():
 def chat():
     try:
         data = request.get_json()
-        if not data: 
+        if not 
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 1)
@@ -255,16 +255,20 @@ def get_chat_response(message, user_id, last_user_question=None):
         norm = msg_low
         for err, cor in terms.items(): norm = norm.replace(err, cor)
 
-        # 🔁 Mantém foco no mesmo assunto (ex: EDI)
-        if last_user_question and any(word in last_user_question.lower() for word in ['edi', 'eletrônico', 'interchange']):
-            if len(msg_low.split()) <= 3 and 'como' not in msg_low and 'quais' not in msg_low:
-                message = "como funciona o edi na netunna"
+        # 🔁 Mantém foco no tema (EDI, Teia Card, etc)
+        intencao_atual = None
+        if last_user_question:
+            if 'edi' in last_user_question.lower():
+                intencao_atual = 'edi'
+            elif 'teia card' in last_user_question.lower():
+                intencao_atual = 'teia_card'
+            elif 'bpo' in last_user_question.lower():
+                intencao_atual = 'bpo'
 
-        # ✅ SAUDAÇÕES PERSONALIZADAS (só uma vez)
+        # ✅ SAUDAÇÕES
         saudacoes = ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem']
         if any(s in msg_low for s in saudacoes):
-            resposta = f"Olá, {name}! Tudo bem?" if name else "Olá! Tudo bem?"
-            resposta += " Como posso te ajudar hoje?"
+            resposta = f"Olá, {name}! Como posso te ajudar hoje?" if name else "Olá! Como posso te ajudar hoje?"
             cid = get_or_create_conversation(user_id, conn)
             log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
             return {'response': resposta, 'intent': 'saudacao'}
@@ -272,12 +276,12 @@ def get_chat_response(message, user_id, last_user_question=None):
         # ✅ DESPEDIDAS
         despedidas = ['tchau', 'até logo', 'obrigado', 'valeu', 'falou']
         if any(d in msg_low for d in despedidas):
-            resposta = f"Tchau, {name}! Fico à disposição." if name else "Tchau! Estou sempre aqui."
+            resposta = f"Tchau, {name}! Fico à disposição." if name else "Tchau! Estou aqui quando precisar."
             cid = get_or_create_conversation(user_id, conn)
             log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
             return {'response': resposta, 'intent': 'despedida'}
 
-        # 🔹 DETECÇÃO DE PERFIL (nome, empresa, ERP)
+        # 🔹 DETECÇÃO DE PERFIL
         if not name:
             match = re.search(r"\b(?:me chamo|meu nome é|sou|eu sou)\s+(\w+)", msg_low)
             if match: update_user_profile(user_id, {'name': match.group(1).title()}, conn)
@@ -291,22 +295,17 @@ def get_chat_response(message, user_id, last_user_question=None):
                     update_user_profile(user_id, {'erp': value}, conn)
                     break
 
-        # 🔍 BUSCA PRIORIZANDO CATEGORIA RELEVANTE
-        categoria_prioritaria = None
-        if 'edi' in msg_low: categoria_prioritaria = 'edi'
-        elif 'teia card' in msg_low: categoria_prioritaria = 'teia_card'
-        elif 'teia values' in msg_low: categoria_prioritaria = 'teia_values'
-
+        # 🔍 BUSCA PRIORIZADA POR INTENÇÃO
         result = None
-        if categoria_prioritaria:
+        if intencao_atual:
             cursor.execute("""
                 SELECT answer, category FROM knowledge_base 
                 WHERE category = %s AND (question LIKE %s OR keywords LIKE %s)
                 ORDER BY updated_at DESC LIMIT 1
-            """, (categoria_prioritaria, f'%{norm}%', f'%{norm}%'))
+            """, (intencao_atual, f'%{norm}%', f'%{norm}%'))
             result = cursor.fetchone()
 
-        # 🔍 Busca geral se não encontrou
+        # 🔍 Busca geral
         if not result:
             cursor.execute("""
                 SELECT answer, category FROM knowledge_base 
@@ -315,13 +314,12 @@ def get_chat_response(message, user_id, last_user_question=None):
             """, (f'%{norm}%', f'%{norm}%'))
             result = cursor.fetchone()
 
-        # 🔍 Busca full-text como fallback
+        # 🔍 Full-text como fallback
         if not result and len(norm.split()) > 1:
             cursor.execute("""
                 SELECT answer, category FROM knowledge_base 
                 WHERE MATCH(question,keywords,answer) AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.7
-                ORDER BY MATCH(question,keywords,answer) AGAINST(%s IN NATURAL LANGUAGE MODE) DESC 
-                LIMIT 1
+                ORDER BY score DESC LIMIT 1
             """, (norm, norm))
             result = cursor.fetchone()
 
@@ -329,13 +327,7 @@ def get_chat_response(message, user_id, last_user_question=None):
         if result:
             cid = get_or_create_conversation(user_id, conn)
             resposta_final = result['answer']
-
-            # Não repete o nome em todas as respostas
-            if name and not any(s in msg_low for s in saudacoes) and 'ola' not in resposta_final.lower():
-                pass  # Já está natural
-
-            log_message(cid, message, True, conn)
-            log_message(cid, resposta_final, False, conn)
+            log_message(cid, message, True, conn); log_message(cid, resposta_final, False, conn)
             return {'response': resposta_final, 'intent': result['category'], 'confidence': 0.9}
 
         # 📚 APRENDIZADO ATIVO
@@ -351,11 +343,11 @@ def get_chat_response(message, user_id, last_user_question=None):
             """, (user_id, message, cid))
             conn.commit()
 
-        # 💡 SUGESTÃO BASEADA NO CONTEXTO
-        if last_user_question and 'edi' in last_user_question.lower():
-            sugestao = "Posso explicar as fases do processo de EDI?"
-        elif 'teia card' in last_user_question.lower():
-            sugestao = "Quer saber mais sobre conciliação automática de cartões?"
+        # 💡 SUGESTÃO INTELIGENTE (sem mandar para site)
+        if intencao_atual == 'edi':
+            sugestao = "Posso explicar as 4 fases do processo de EDI?"
+        elif intencao_atual == 'teia_card':
+            sugestao = "Quer saber como funciona a conciliação automática?"
         else:
             sugestao = "Posso te ajudar a esclarecer melhor?"
 
@@ -383,4 +375,3 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-    
