@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -105,7 +105,7 @@ def health_check():
 def chat():
     try:
         data = request.get_json()
-        if not data:
+        if not 
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 1)
@@ -121,8 +121,7 @@ def chat():
             'timestamp': str(datetime.now())
         })
 
-        last_question = session['conversation_history'][-2]['text'] if len(
-            session['conversation_history']) > 1 else None
+        last_question = session['conversation_history'][-2]['text'] if len(session['conversation_history']) > 1 else None
         response = get_chat_response(user_message, user_id, last_question)
 
         session['conversation_history'].append({
@@ -142,16 +141,20 @@ def chat():
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
-        if request.form.get('password') == os.getenv('ADMIN_PASSWORD', 'netunna123'):
+        password = request.form.get('password')
+        correct_password = os.getenv('ADMIN_PASSWORD', 'netunna123')
+        if password == correct_password:
             session['admin_logged_in'] = True
             return redirect(url_for('learn_dashboard'))
-        return '<p>Senha incorreta</p><a href="/admin/login">Tentar novamente</a>', 401
+        return '<script>alert("Senha incorreta!"); window.location="/admin/login";</script>', 401
     return '''
-        <h3>Login Admin</h3>
-        <form method="post">
-            <input type="password" name="password" placeholder="Senha" required>
-            <button type="submit">Entrar</button>
-        </form>
+        <html><body style="font-family:Arial;text-align:center;padding:50px;">
+            <h3>🔐 Login Admin</h3>
+            <form method="post" style="display:inline-block;text-align:left;">
+                <input type="password" name="password" placeholder="Senha" required style="padding:10px;width:300px;"><br><br>
+                <button type="submit" style="padding:10px 20px;background:#007bff;color:white;border:none;">Entrar</button>
+            </form>
+        </body></html>
     '''
 
 
@@ -169,8 +172,7 @@ def learn_dashboard():
         WHERE status = 'pending' ORDER BY created_at DESC LIMIT 50
     """)
     questions = cursor.fetchall()
-    cursor.close();
-    conn.close()
+    cursor.close(); conn.close()
 
     return render_template('admin_learn.html', questions=questions)
 
@@ -200,11 +202,10 @@ def teach_ednna():
         conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close();
-        conn.close()
+        cursor.close(); conn.close()
 
 
-# === FUNÇÕES AUXILIARES (DEVE VIR ANTES DE GET_CHAT_RESPONSE) ===
+# === FUNÇÕES AUXILIARES ===
 
 def get_or_create_user_profile(user_id, connection):
     cursor = None
@@ -250,8 +251,7 @@ def get_or_create_conversation(user_id, connection):
         cursor.execute(query, (user_id,))
         result = cursor.fetchone()
         if result: return result[0]
-        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')",
-                       (user_id,))
+        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')", (user_id,))
         connection.commit()
         return cursor.lastrowid
     except Error as e:
@@ -274,7 +274,7 @@ def log_message(conversation_id, message, is_from_user, connection):
         if cursor: cursor.close()
 
 
-# === CHAT RESPONSE (DEPOIS DE TODAS AS FUNÇÕES) ===
+# === RESPOSTA INTELIGENTE ===
 
 def get_chat_response(message, user_id, last_user_question=None):
     conn = get_db_connection()
@@ -284,11 +284,30 @@ def get_chat_response(message, user_id, last_user_question=None):
         cursor = conn.cursor(dictionary=True)
         msg_low = message.strip().lower()
 
+        # Saudações
+        saudacoes = ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem']
+        if any(s in msg_low for s in saudacoes):
+            cursor.execute("SELECT answer FROM knowledge_base WHERE category='saudacao' LIMIT 1")
+            result = cursor.fetchone()
+            if result:
+                cid = get_or_create_conversation(user_id, conn)
+                log_message(cid, message, True, conn)
+                log_message(cid, result['answer'], False, conn)
+                return {'response': result['answer'], 'intent': 'saudacao', 'confidence': 0.95}
+
+        # Despedidas
+        despedidas = ['tchau', 'até logo', 'obrigado', 'valeu', 'falou', 'até mais', 'vou sair', 'encerrar', 'finalizar']
+        if any(d in msg_low for d in despedidas):
+            profile = get_or_create_user_profile(user_id, conn) or {}
+            name = profile.get('name')
+            resposta = f"Tchau, {name}! Foi um prazer te ajudar." if name else "Tchau! Fico à disposição para ajudar."
+            cid = get_or_create_conversation(user_id, conn)
+            log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
+            return {'response': resposta, 'intent': 'despedida', 'confidence': 0.95}
+
         # Perfil do usuário
         profile = get_or_create_user_profile(user_id, conn) or {}
-        name = profile.get('name');
-        company = profile.get('company');
-        erp = profile.get('erp')
+        name = profile.get('name'); company = profile.get('company'); erp = profile.get('erp')
         prefix = f"Olá, {name}! " if name else ""
         if company: prefix += f"Da {company}, certo? "
 
@@ -305,7 +324,6 @@ def get_chat_response(message, user_id, last_user_question=None):
                 match = re.search(pattern, msg_low)
                 if match:
                     profile_updates['name'] = match.group(2).title()
-                    logger.info(f"[Perfil] Nome detectado via padrão '{pattern}': {profile_updates['name']}")
                     break
 
         # 2. Detecta empresa com contexto
@@ -318,7 +336,6 @@ def get_chat_response(message, user_id, last_user_question=None):
                 match = re.search(pattern, msg_low)
                 if match:
                     company_name = match.group(1).title()
-                    # Normaliza nomes conhecidos
                     company_map = {
                         'Damyller': 'Damyller',
                         'Felicio': 'Hospital Felício Rocho',
@@ -332,18 +349,10 @@ def get_chat_response(message, user_id, last_user_question=None):
         # 3. Detecta ERP com maior cobertura
         if not erp:
             erp_map = {
-                'totvs': 'TOTVS',
-                'protheus': 'TOTVS',
-                'flex': 'TOTVS',
-                'rm': 'TOTVS',
-                'siga': 'TOTVS',
-                'sap': 'SAP',
-                'business one': 'SAP',
-                'b1': 'SAP',
-                'oracle': 'ORACLE',
-                'netsuite': 'ORACLE',
-                'sankhya': 'SANKHYA',
-                'microsiga': 'SANKHYA'
+                'totvs': 'TOTVS', 'protheus': 'TOTVS', 'flex': 'TOTVS', 'rm': 'TOTVS', 'siga': 'TOTVS',
+                'sap': 'SAP', 'business one': 'SAP', 'b1': 'SAP',
+                'oracle': 'ORACLE', 'netsuite': 'ORACLE',
+                'sankhya': 'SANKHYA', 'microsiga': 'SANKHYA'
             }
             msg_for_erp = msg_low.replace('-', ' ')
             for key, value in erp_map.items():
@@ -354,51 +363,31 @@ def get_chat_response(message, user_id, last_user_question=None):
         # 4. Atualiza perfil em uma única operação
         if profile_updates:
             update_user_profile(user_id, profile_updates, conn)
-            # Atualiza variáveis locais para uso imediato na resposta
-            if 'name' in profile_updates:
-                name = profile_updates['name']
-            if 'company' in profile_updates:
-                company = profile_updates['company']
-            if 'erp' in profile_updates:
-                erp = profile_updates['erp']
+            if 'name' in profile_updates: name = profile_updates['name']
+            if 'company' in profile_updates: company = profile_updates['company']
+            if 'erp' in profile_updates: erp = profile_updates['erp']
 
-        # Contexto curto
+        # Lógica de contexto curto
         if len(message.split()) <= 2 and last_user_question:
             last_low = last_user_question.lower()
             if "teia" in last_low:
-                if "card" in last_low:
-                    message = "o que é o teia card"
-                elif "values" in last_low:
-                    message = "o que é o teia values"
+                if "card" in last_low: message = "o que é o teia card"
+                elif "values" in last_low: message = "o que é o teia values"
             elif any(w in last_low for w in ["chargeback", "estorno"]):
                 if any(w in msg_low for w in ["que pena", "poxa"]): message = "como reduzir chargebacks"
 
-        # Filtros
+        # Filtros de conteúdo
         if is_absurd_context(message):
             resp = "Prefiro focar em conciliação, EDI, BPO. Posso te ajudar com algo nessa área?"
             cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn);
-            log_message(cid, resp, False, conn)
+            log_message(cid, message, True, conn); log_message(cid, resp, False, conn)
             return {'response': resp, 'intent': 'filtered', 'confidence': 0.99}
 
         if is_offensive_or_absurd(message):
             resp = get_appropriate_response_for_offensive(message)
             cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn);
-            log_message(cid, resp, False, conn)
+            log_message(cid, message, True, conn); log_message(cid, resp, False, conn)
             return {'response': resp, 'intent': 'filtered', 'confidence': 0.99}
-
-        # Saudações
-        saudacoes = ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem']
-        if any(s in msg_low for s in saudacoes):
-            cursor.execute("SELECT answer FROM knowledge_base WHERE category='saudacao' LIMIT 1")
-            result = cursor.fetchone()
-            if result:
-                cid = get_or_create_conversation(user_id, conn)
-                log_message(cid, message, True, conn)
-                full_resp = prefix + result['answer']
-                log_message(cid, full_resp, False, conn)
-                return {'response': full_resp, 'intent': 'saudacao', 'confidence': 0.95}
 
         # Busca normalizada
         terms = {'teiacard': 'teia card', 'teiavalue': 'teia values'}
@@ -420,12 +409,11 @@ def get_chat_response(message, user_id, last_user_question=None):
             """, (norm, norm))
             result = cursor.fetchone()
 
-        # Resposta
+        # Resposta encontrada
         if result:
             cid = get_or_create_conversation(user_id, conn)
             full_answer = prefix + result['answer'] if prefix else result['answer']
-            log_message(cid, message, True, conn);
-            log_message(cid, full_answer, False, conn)
+            log_message(cid, message, True, conn); log_message(cid, full_answer, False, conn)
             return {'response': full_answer, 'intent': result['category'], 'confidence': 0.9}
 
         # Aprendizado ativo
@@ -463,7 +451,7 @@ def get_chat_response(message, user_id, last_user_question=None):
         if conn and conn.is_connected(): conn.close()
 
 
-# Proteção de rotas admin
+# Protege rotas admin
 @app.before_request
 def require_login():
     if '/admin/' in request.path and request.endpoint != 'admin_login':
@@ -474,3 +462,4 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+    
