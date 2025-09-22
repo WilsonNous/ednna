@@ -119,6 +119,28 @@ def admin_login():
     '''
 
 
+@app.route('/admin/dashboard')
+def dashboard():
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT COUNT(*) as total FROM messages WHERE is_from_user = 1")
+    total_respondidas = cursor.fetchone()['total']
+
+    cursor.execute("SELECT COUNT(*) as total FROM unknown_questions WHERE status = 'pending'")
+    total_pendentes = cursor.fetchone()['total']
+
+    # Aqui você pode calcular taxa de acerto, etc.
+
+    return render_template('dashboard.html',
+                           total_respondidas=total_respondidas,
+                           total_pendentes=total_pendentes,
+                           taxa_edi=92,
+                           frequentes=[])
+
+
 @app.route('/admin/learn')
 def learn_dashboard():
     if not session.get('admin_logged_in'):
@@ -375,4 +397,3 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
