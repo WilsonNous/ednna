@@ -317,33 +317,47 @@ def get_chat_response(message, user_id, last_user_question=None):
                     update_user_profile(user_id, {'erp': value}, conn)
                     break
 
-        # 🔍 BUSCA PRIORIZADA POR INTENÇÃO
+        # 🔍 BUSCA POR INTENÇÃO
         result = None
         if intencao_atual:
-            cursor.execute("""
-                SELECT answer, category FROM knowledge_base 
-                WHERE category = %s AND (question LIKE %s OR keywords LIKE %s)
-                ORDER BY updated_at DESC LIMIT 1
-            """, (intencao_atual, f'%{norm}%', f'%{norm}%'))
-            result = cursor.fetchone()
+            try:
+                cursor.execute("""
+                    SELECT answer, category FROM knowledge_base 
+                    WHERE category = %s AND (question LIKE %s OR keywords LIKE %s)
+                    ORDER BY updated_at DESC LIMIT 1
+                """, (intencao_atual, f'%{norm}%', f'%{norm}%'))
+                result = cursor.fetchone()
+            except Error as e:
+                logger.error(f"Erro na busca por intenção: {e}")
 
         # 🔍 Busca geral
         if not result:
-            cursor.execute("""
-                SELECT answer, category FROM knowledge_base 
-                WHERE question LIKE %s OR keywords LIKE %s 
-                ORDER BY updated_at DESC LIMIT 1
-            """, (f'%{norm}%', f'%{norm}%'))
-            result = cursor.fetchone()
+            try:
+                cursor.execute("""
+                    SELECT answer, category FROM knowledge_base 
+                    WHERE question LIKE %s OR keywords LIKE %s 
+                    ORDER BY updated_at DESC LIMIT 1
+                """, (f'%{norm}%', f'%{norm}%'))
+                result = cursor.fetchone()
+            except Error as e:
+                logger.error(f"Erro na busca geral: {e}")
 
         # 🔍 Full-text como fallback
         if not result and len(norm.split()) > 1:
-            cursor.execute("""
-                SELECT answer, category FROM knowledge_base 
-                WHERE MATCH(question,keywords,answer) AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.7
-                ORDER BY score DESC LIMIT 1
-            """, (norm, norm))
-            result = cursor.fetchone()
+            try:
+                safe_norm = conn.converter.escape(norm)
+                query_fulltext = f"""
+                    SELECT answer, category,
+                           MATCH(question, keywords, answer) AGAINST('{safe_norm}' IN NATURAL LANGUAGE MODE) as score
+                    FROM knowledge_base
+                    WHERE MATCH(question, keywords, answer) AGAINST('{safe_norm}' IN NATURAL LANGUAGE MODE) > 0.7
+                    ORDER BY score DESC
+                    LIMIT 1
+                """
+                cursor.execute(query_fulltext)
+                result = cursor.fetchone()
+            except Exception as e:
+                logger.error(f"Erro na busca full-text: {e}")
 
         # ✅ RESPOSTA ENCONTRADA
         if result:
