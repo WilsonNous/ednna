@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>📊 Dashboard Ednna</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .card { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h1>Dashboard de Performance da Ednna</h1>
+
+    <div class="card">
+        <h3>📈 Métricas</h3>
+        <p><strong>Perguntas respondidas:</strong> {{ total_respondidas }}</p>
+        <p><strong>Aprendizado ativo:</strong> {{ total_pendentes }} pendentes</p>
+        <p><strong>Taxa de acerto EDI:</strong> {{ taxa_edi }}%</p>
+    </div>
+
+    <div class="card">
+        <h3>🔍 Perguntas frequentes sem resposta</h3>
+        <ul>
+        {% for q in frequentes %}
+            <li>{{ q.question }} ({{ q.count }}x)</li>
+        {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
