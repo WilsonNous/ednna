@@ -66,7 +66,7 @@ def health_check():
 def chat():
     try:
         data = request.get_json()
-        if not data:
+        if not 
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 1)
@@ -121,24 +121,38 @@ def admin_login():
 
 @app.route('/admin/dashboard')
 def dashboard():
-    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
 
     conn = get_db_connection()
+    if not conn:
+        return "Erro de conexão", 500
+
     cursor = conn.cursor(dictionary=True)
+    try:
+        # Métricas simples
+        cursor.execute("SELECT COUNT(*) as total FROM messages WHERE is_from_user = 1")
+        total_respondidas = cursor.fetchone()['total']
 
-    cursor.execute("SELECT COUNT(*) as total FROM messages WHERE is_from_user = 1")
-    total_respondidas = cursor.fetchone()['total']
+        cursor.execute("SELECT COUNT(*) as total FROM unknown_questions WHERE status = 'pending'")
+        total_pendentes = cursor.fetchone()['total']
 
-    cursor.execute("SELECT COUNT(*) as total FROM unknown_questions WHERE status = 'pending'")
-    total_pendentes = cursor.fetchone()['total']
+        # Perguntas frequentes não respondidas (últimas 10 horas)
+        cursor.execute("""
+            SELECT question, COUNT(*) as count FROM unknown_questions 
+            WHERE created_at > DATE_SUB(NOW(), INTERVAL 10 HOUR)
+            GROUP BY question ORDER BY count DESC LIMIT 5
+        """)
+        frequentes = cursor.fetchall()
 
-    # Aqui você pode calcular taxa de acerto, etc.
-
-    return render_template('dashboard.html',
-                           total_respondidas=total_respondidas,
-                           total_pendentes=total_pendentes,
-                           taxa_edi=92,
-                           frequentes=[])
+        return render_template('dashboard.html',
+                               total_respondidas=total_respondidas,
+                               total_pendentes=total_pendentes,
+                               taxa_edi=92,
+                               frequentes=frequentes)
+    finally:
+        cursor.close()
+        conn.close()
 
 
 @app.route('/admin/learn')
@@ -147,7 +161,8 @@ def learn_dashboard():
         return redirect(url_for('admin_login'))
 
     conn = get_db_connection()
-    if not conn: return "Erro DB", 500
+    if not conn:
+        return "Erro DB", 500
 
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -155,29 +170,43 @@ def learn_dashboard():
         WHERE status = 'pending' ORDER BY created_at DESC LIMIT 50
     """)
     questions = cursor.fetchall()
-    cursor.close(); conn.close()
+    cursor.close()
+    conn.close()
 
     return render_template('admin_learn.html', questions=questions)
 
 
 @app.route('/admin/teach', methods=['POST'])
 def teach_ednna():
-    if not session.get('admin_logged_in'): return jsonify({'error': 'Acesso negado'}), 403
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Acesso negado'}), 403
+
     data = request.get_json()
-    q, a, c = data.get('question'), data.get('answer'), data.get('category')
-    if not all([q, a, c]): return jsonify({"error": "Campos obrigatórios"}), 400
+    q = data.get('question', '').strip()
+    a = data.get('answer', '').strip()
+    c = data.get('category', '').strip()
+
+    if not all([q, a, c]):
+        return jsonify({"error": "Campos obrigatórios"}), 400
 
     conn = get_db_connection()
-    if not conn: return jsonify({"error": "DB"}), 500
+    if not conn:
+        return jsonify({"error": "DB"}), 500
 
     cursor = conn.cursor()
     try:
-        keywords = ",".join(set(re.findall(r'\w{5,}', a.lower()))[:10]) or "geral"
+        # Gerar keywords
+        words = re.findall(r'\w{5,}', a.lower())
+        keywords = ",".join(set(words[:10])) or "geral"
+
+        # Inserir ou atualizar
         cursor.execute("""
             INSERT INTO knowledge_base (question, answer, category, keywords, created_at, updated_at)
             VALUES (%s, %s, %s, %s, NOW(), NOW())
             ON DUPLICATE KEY UPDATE answer = VALUES(answer), updated_at = NOW()
         """, (q, a, c, keywords))
+
+        # Marcar como respondida
         cursor.execute("UPDATE unknown_questions SET status = 'answered' WHERE question = %s", (q,))
         conn.commit()
         return jsonify({"status": "success"})
@@ -185,7 +214,8 @@ def teach_ednna():
         conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close(); conn.close()
+        cursor.close()
+        conn.close()
 
 
 # === FUNÇÕES AUXILIARES ===
@@ -234,7 +264,8 @@ def get_or_create_conversation(user_id, connection):
             ORDER BY started_at DESC LIMIT 1
         """, (user_id,))
         result = cursor.fetchone()
-        if result: return result[0]
+        if result:
+            return result[0]
         cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')", (user_id,))
         connection.commit()
         return cursor.lastrowid
@@ -262,7 +293,8 @@ def log_message(conversation_id, message, is_from_user, connection):
 
 def get_chat_response(message, user_id, last_user_question=None):
     conn = get_db_connection()
-    if not conn: return {'response': 'Erro de conexão', 'intent': 'error'}
+    if not conn:
+        return {'response': 'Erro de conexão', 'intent': 'error'}
     cursor = None
     try:
         cursor = conn.cursor(dictionary=True)
@@ -270,12 +302,15 @@ def get_chat_response(message, user_id, last_user_question=None):
 
         # Carrega perfil do usuário
         profile = get_or_create_user_profile(user_id, conn) or {}
-        name = profile.get('name'); company = profile.get('company'); erp = profile.get('erp')
+        name = profile.get('name')
+        company = profile.get('company')
+        erp = profile.get('erp')
 
         # Normalização de termos
         terms = {'teiacard': 'teia card', 'teiavalue': 'teia values'}
         norm = msg_low
-        for err, cor in terms.items(): norm = norm.replace(err, cor)
+        for err, cor in terms.items():
+            norm = norm.replace(err, cor)
 
         # 🔁 Mantém foco no tema (EDI, Teia Card, etc)
         intencao_atual = None
@@ -292,7 +327,8 @@ def get_chat_response(message, user_id, last_user_question=None):
         if any(s in msg_low for s in saudacoes):
             resposta = f"Olá, {name}! Como posso te ajudar hoje?" if name else "Olá! Como posso te ajudar hoje?"
             cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
+            log_message(cid, message, True, conn)
+            log_message(cid, resposta, False, conn)
             return {'response': resposta, 'intent': 'saudacao'}
 
         # ✅ DESPEDIDAS
@@ -300,18 +336,21 @@ def get_chat_response(message, user_id, last_user_question=None):
         if any(d in msg_low for d in despedidas):
             resposta = f"Tchau, {name}! Fico à disposição." if name else "Tchau! Estou aqui quando precisar."
             cid = get_or_create_conversation(user_id, conn)
-            log_message(cid, message, True, conn); log_message(cid, resposta, False, conn)
+            log_message(cid, message, True, conn)
+            log_message(cid, resposta, False, conn)
             return {'response': resposta, 'intent': 'despedida'}
 
         # 🔹 DETECÇÃO DE PERFIL
         if not name:
             match = re.search(r"\b(?:me chamo|meu nome é|sou|eu sou)\s+(\w+)", msg_low)
-            if match: update_user_profile(user_id, {'name': match.group(1).title()}, conn)
+            if match:
+                update_user_profile(user_id, {'name': match.group(1).title()}, conn)
         if not company:
             match = re.search(r"\b(?:trabalho na|sou da|empresa)\s+(\w+)", msg_low)
-            if match: update_user_profile(user_id, {'company': match.group(1).title()}, conn)
+            if match:
+                update_user_profile(user_id, {'company': match.group(1).title()}, conn)
         if not erp:
-            erps = {'totvs':'TOTVS','sap':'SAP','oracle':'ORACLE','sankhya':'SANKHYA'}
+            erps = {'totvs': 'TOTVS', 'sap': 'SAP', 'oracle': 'ORACLE', 'sankhya': 'SANKHYA'}
             for key, value in erps.items():
                 if key in msg_low:
                     update_user_profile(user_id, {'erp': value}, conn)
@@ -363,20 +402,22 @@ def get_chat_response(message, user_id, last_user_question=None):
         if result:
             cid = get_or_create_conversation(user_id, conn)
             resposta_final = result['answer']
-            log_message(cid, message, True, conn); log_message(cid, resposta_final, False, conn)
+            log_message(cid, message, True, conn)
+            log_message(cid, resposta_final, False, conn)
             return {'response': resposta_final, 'intent': result['category'], 'confidence': 0.9}
 
         # 📚 APRENDIZADO ATIVO
+        short_question = message[:255]  # Evita exceder limite
         cursor.execute("""
             SELECT id FROM unknown_questions 
             WHERE question = %s AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-        """, (message,))
+        """, (short_question,))
         if not cursor.fetchone():
             cid = get_or_create_conversation(user_id, conn)
             cursor.execute("""
                 INSERT INTO unknown_questions (user_id, question, conversation_id, status)
                 VALUES (%s, %s, %s, 'pending')
-            """, (user_id, message, cid))
+            """, (user_id, short_question, cid))
             conn.commit()
 
         # 💡 SUGESTÃO INTELIGENTE (sem mandar para site)
