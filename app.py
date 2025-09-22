@@ -66,7 +66,7 @@ def health_check():
 def chat():
     try:
         data = request.get_json()
-        if not 
+        if not data:
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 1)
@@ -452,3 +452,4 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
