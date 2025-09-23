@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Históricos - Ednna Admin</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        header {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        nav {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 15px;
+        }
+        nav a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: 600;
+            padding: 8px 15px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        nav a:hover {
+            background: #e9ecef;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f1f3f5;
+            font-weight: 600;
+            color: #212529;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .btn {
+            padding: 6px 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .active { background: #d4edda; color: #155724; }
+        .closed { background: #d1ecf1; color: #0c5460; }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Painel de Históricos - Ednna</h1>
+            <p>Visualize todas as conversas dos usuários</p>
+        </header>
+
+        <nav>
+            <a href="/admin/learn">Aprender</a>
+            <a href="/admin/dashboard">Dashboard</a>
+            <a href="/admin/historics">Históricos</a>
+            <a href="/logout">Sair</a>
+        </nav>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Conversa</th>
+                    <th>User ID</th>
+                    <th>Nome</th>
+                    <th>Empresa</th>
+                    <th>ERP</th>
+                    <th>Início</th>
+                    <th>Mensagens</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for conv in conversations %}
+                <tr>
+                    <td>{{ conv.conversation_id }}</td>
+                    <td>{{ conv.user_id }}</td>
+                    <td>{{ conv.name or 'Anônimo' }}</td>
+                    <td>{{ conv.company or '-' }}</td>
+                    <td>{{ conv.erp or '-' }}</td>
+                    <td>{{ conv.started_at.strftime('%d/%m %H:%M') if conv.started_at else '-' }}</td>
+                    <td>{{ conv.total_messages }}</td>
+                    <td>
+                        <span class="status {{ 'active' if conv.status == 'active' else 'closed' }}">
+                            {{ 'Ativa' if conv.status == 'active' else 'Fechada' }}
+                        </span>
+                    </td>
+                    <td>
+                        <form action="/admin/conversa/{{ conv.conversation_id }}" method="GET" style="display:inline;">
+                            <button type="submit" class="btn btn-small">Ver Detalhes</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <footer>
+            Netunna Software © 2025 | Ednna Assistant
+        </footer>
+    </div>
+</body>
+</html>
