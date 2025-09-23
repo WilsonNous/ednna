@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Conversa #{{ conversa.id }} - Ednna</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+        header { background: #007bff; color: white; padding: 20px; text-align: center; }
+        .info { padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+        .messages { padding: 20px; min-height: 400px; }
+        .message { margin-bottom: 15px; max-width: 80%; padding: 10px 15px; border-radius: 12px; line-height: 1.5; }
+        .user { background: #007bff; color: white; align-self: flex-end; float: right; clear: both; }
+        .bot { background: #e9ecef; color: #212529; align-self: flex-start; float: left; clear: both; }
+        .clear { clear: both; }
+        .actions { padding: 20px; text-align: center; }
+        .btn { padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; text-decoration: none; margin: 0 10px; }
+        .btn-primary { background: #007bff; }
+        footer { text-align: center; padding: 20px; color: #6c757d; font-size: 0.9rem; border-top: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Conversa #{{ conversa.id }}</h1>
+            <p>User ID: {{ conversa.user_id }}</p>
+        </header>
+
+        <div class="info">
+            <strong>Início:</strong> {{ conversa.started_at.strftime('%d/%m/%Y %H:%M') }} |
+            <strong>Status:</strong> {{ 'Ativa' if conversa.status == 'active' else 'Fechada' }} |
+            <strong>Nome:</strong> {{ perfil.name or 'Anônimo' }} |
+            <strong>ERP:</strong> {{ perfil.erp or '-' }}
+        </div>
+
+        <div class="messages">
+            {% for msg in mensagens %}
+            <div class="message {{ 'user' if msg.is_from_user else 'bot' }}">
+                {{ msg.message_text }}
+            </div>
+            <div class="clear"></div>
+            {% endfor %}
+        </div>
+
+        <div class="actions">
+            <a href="/admin/historics" class="btn">← Voltar</a>
+            <a href="/admin/exportar/{{ conversa.id }}" class="btn btn-primary">Exportar para TXT</a>
+        </div>
+
+        <footer>
+            Netunna Software © 2025 | Ednna Assistant
+        </footer>
+    </div>
+</body>
+</html>
