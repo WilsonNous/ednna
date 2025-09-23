@@ -66,7 +66,7 @@ def health_check():
 def chat():
     try:
         data = request.get_json()
-        if not data:
+        if not 
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
         user_id = data.get('user_id', 'anonymous')
@@ -151,6 +151,117 @@ def dashboard():
     finally:
         cursor.close()
         conn.close()
+
+
+@app.route('/admin/historics')
+def historics_dashboard():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    if not conn:
+        return "Erro de conexão", 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT 
+                c.id as conversation_id,
+                c.user_id,
+                c.started_at,
+                c.status,
+                p.name,
+                p.company,
+                p.erp,
+                (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) as total_messages
+            FROM conversations c
+            LEFT JOIN user_profiles p ON c.user_id = p.user_id
+            ORDER BY c.started_at DESC
+            LIMIT 100
+        """)
+        conversations = cursor.fetchall()
+
+        return render_template('historics.html', conversations=conversations)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/admin/conversa/<int:conversation_id>')
+def ver_conversa(conversation_id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    if not conn:
+        return "Erro de conexão", 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM conversations WHERE id = %s", (conversation_id,))
+        conversa = cursor.fetchone()
+
+        if not conversa:
+            return "Conversa não encontrada", 404
+
+        cursor.execute("SELECT name, company, erp FROM user_profiles WHERE user_id = %s", (conversa['user_id'],))
+        perfil = cursor.fetchone() or {}
+
+        cursor.execute("""
+            SELECT is_from_user, message_text, sent_at 
+            FROM messages 
+            WHERE conversation_id = %s 
+            ORDER BY sent_at ASC
+        """, (conversation_id,))
+        mensagens = cursor.fetchall()
+
+        return render_template('conversa_detalhe.html',
+                             conversa=conversa,
+                             perfil=perfil,
+                             mensagens=mensagens)
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/admin/exportar/<int:conversation_id>')
+def exportar_conversa(conversation_id):
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    if not conn:
+        return "Erro", 500
+
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM conversations WHERE id = %s", (conversation_id,))
+    conversa = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT is_from_user, message_text, sent_at FROM messages 
+        WHERE conversation_id = %s ORDER BY sent_at ASC
+    """, (conversation_id,))
+    mensagens = cursor.fetchall()
+
+    content = f"CONVERSA #{conversation_id} - {conversa['started_at']}\n"
+    content += f"USER ID: {conversa['user_id']}\n\n"
+
+    for msg in mensagens:
+        sender = "Usuário" if msg['is_from_user'] else "Ednna"
+        dt = msg['sent_at'].strftime('%d/%m %H:%M')
+        content += f"[{dt}] {sender}: {msg['message_text']}\n"
+
+    conn.close()
+
+    from io import StringIO
+    from flask import Response
+
+    buffer = StringIO(content)
+    return Response(
+        buffer.getvalue(),
+        mimetype='text/plain',
+        headers={'Content-Disposition': f'attachment;filename=conversa_{conversation_id}.txt'}
+    )
 
 
 @app.route('/admin/learn')
