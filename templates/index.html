@@ -200,20 +200,93 @@
         .bot-message li {
             margin: 4px 0;
         }
+
+        /* Modal de Login */
+        #loginModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: var(--orange);
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .modal-content label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .modal-content button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px 5px 0;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <!-- Modal de Login -->
-    <div id="loginModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-        <div style="background:white; padding:30px; border-radius:10px; width:90%; max-width:400px; text-align:center;">
+    <div id="loginModal">
+        <div class="modal-content">
             <h3>🔐 Identifique-se</h3>
-            <p style="color:#666;">Para salvar seu histórico</p>
-            <input type="text" id="nameInput" placeholder="Seu nome" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:6px;" />
-            <label style="display:flex; align-items:center; justify-content:center; margin:10px 0; font-size:0.9rem;">
-                <input type="checkbox" id="rememberName" /> Lembrar meu nome
+            <p>Para salvar seu histórico de conversas</p>
+            <input type="text" id="nameInput" placeholder="Seu nome">
+            <label>
+                <input type="checkbox" id="rememberName"> Lembrar meu nome
             </label>
-            <button onclick="saveLogin()" style="width:100%; padding:12px; background:#007bff; color:white; border:none; border-radius:6px; font-weight:bold;">Entrar</button>
-            <button onclick="closeLogin()" style="margin-top:10px; background:#6c757d;">Cancelar</button>
+            <button onclick="saveLogin()" class="btn-primary">Entrar no Chat</button>
+            <button onclick="closeLogin()" class="btn-secondary">Continuar como visitante</button>
         </div>
     </div>
 
@@ -245,10 +318,20 @@
         Netunna Software © 2025
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Carrega marked.js dinamicamente -->
+    <script>
+        // Carrega marked.js via CDN
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+        script.onload = () => console.log('✅ marked.js carregado com sucesso');
+        script.onerror = () => console.error('❌ Falha ao carregar marked.js');
+        document.head.appendChild(script);
+    </script>
+
     <script>
         let userName = null;
 
+        // Carrega nome salvo ao iniciar
         window.onload = () => {
             const savedName = localStorage.getItem('savedUserName');
             if (savedName) {
@@ -257,14 +340,17 @@
             }
         };
 
+        // Abre modal de login
         function openLogin() {
             document.getElementById('loginModal').style.display = 'flex';
         }
 
+        // Fecha modal
         function closeLogin() {
             document.getElementById('loginModal').style.display = 'none';
         }
 
+        // Salva login
         function saveLogin() {
             const name = document.getElementById('nameInput').value.trim();
             const remember = document.getElementById('rememberName').checked;
@@ -280,19 +366,22 @@
             } else {
                 localStorage.removeItem('savedUserName');
             }
+
             closeLogin();
             updateHeader();
             addMessage(`Olá, ${name}! Que bom te ver. Como posso te ajudar hoje?`, 'bot');
         }
 
+        // Atualiza cabeçalho com nome
         function updateHeader() {
             const btn = document.querySelector('.login-btn');
-            if (userName) {
+            if (userName && btn) {
                 btn.innerHTML = `<span class="user-badge">${userName}</span>`;
-                btn.onclick = null;
+                btn.onclick = null; // Desativa clique após login
             }
         }
 
+        // Envia mensagem para backend
         async function sendMessage() {
             const input = document.getElementById('user-input');
             const message = input.value.trim();
@@ -330,6 +419,7 @@
             }
         }
 
+        // Indicador de digitação
         function createTypingIndicator() {
             const div = document.createElement('div');
             div.classList.add('message', 'bot-message');
@@ -337,6 +427,7 @@
             return div;
         }
 
+        // Adiciona mensagem ao chat
         function addMessage(text, sender) {
             const chatMessages = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
@@ -358,7 +449,17 @@
                 avatar.style.flexShrink = "0";
 
                 const content = document.createElement('div');
-                content.innerHTML = marked.parse(text);
+
+                // Usa marked se disponível
+                if (typeof marked !== 'undefined') {
+                    try {
+                        content.innerHTML = marked.parse(text);
+                    } catch (e) {
+                        content.textContent = text;
+                    }
+                } else {
+                    content.textContent = text;
+                }
 
                 container.appendChild(avatar);
                 container.appendChild(content);
@@ -371,10 +472,12 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
+        // Envia com Enter
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendMessage();
         }
 
+        // Gera ID único por sessão
         function getUserID() {
             if (!sessionStorage.getItem('userSessionId')) {
                 const id = Math.random().toString(36).substr(2, 9);
