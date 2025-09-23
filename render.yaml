@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ednna-app
+    runtime: python
+    startCommand: |
+      curl -fsSL https://ollama.com/install.sh | sh &
+      sleep 10
+      ollama serve & sleep 10 && ollama pull llama3.2
+      gunicorn app:app
+    envVars:
+      - key: PORT
+        value: 10000
