@@ -2,11 +2,9 @@ services:
   - type: web
     name: ednna-app
     runtime: python
+    buildCommand: |
+      pip install -r requirements.txt
+      curl -fsSL https://ollama.com/install.sh | sh
     startCommand: |
-      curl -fsSL https://ollama.com/install.sh | sh &
-      sleep 10
-      ollama serve & sleep 10 && ollama pull llama3.2
-      gunicorn app:app
-    envVars:
-      - key: PORT
-        value: 10000
+      ollama serve & sleep 15 && ollama pull llama3.2 && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    healthCheckPath: /api/health
