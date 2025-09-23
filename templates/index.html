@@ -33,54 +33,7 @@
             justify-content: center;
         }
 
-        .login-form {
-            max-width: 400px;
-            width: 100%;
-            background: var(--white);
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            padding: 30px;
-            text-align: center;
-        }
-        .login-form h2 { color: var(--orange); margin-bottom: 20px; }
-        .login-form input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid var(--border-gray);
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        .remember-me {
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }
-        .remember-me input { margin-right: 5px; }
-        .login-form button {
-            background: var(--orange);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-        }
-        .login-form button:hover { background: var(--orange-hover); }
-        .login-footer {
-            margin-top: 20px;
-            font-size: 0.9rem;
-            color: #666;
-        }
-        .login-footer button {
-            background: #6c757d;
-            padding: 8px 12px;
-            font-size: 0.9rem;
-        }
-
         .chat-container {
-            display: none;
             width: 100%;
             max-width: 600px;
             background: var(--white);
@@ -98,6 +51,13 @@
             padding: 15px 20px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
             gap: 12px;
         }
 
@@ -112,6 +72,28 @@
         .chat-header h2 {
             font-weight: 600;
             font-size: 1.2rem;
+        }
+
+        .user-badge {
+            font-size: 0.85rem;
+            background: #3b82f6;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+
+        .login-btn {
+            background: transparent;
+            color: var(--white);
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .login-btn:hover {
+            background: rgba(255,255,255,0.1);
         }
 
         .chat-messages {
@@ -199,6 +181,7 @@
             font-size: 0.85rem;
         }
 
+        /* Estilo para Markdown */
         .bot-message strong {
             font-weight: 600;
             color: var(--orange);
@@ -220,197 +203,185 @@
     </style>
 </head>
 <body>
-
-<div class="login-form" id="loginForm">
-    <h2>🔐 Identifique-se</h2>
-    <p style="color: #666;">Para salvar seu histórico de conversas</p>
-    <input type="text" id="nameInput" placeholder="Seu nome" />
-    <div class="remember-me">
-        <input type="checkbox" id="rememberName" /> 
-        <span>Lembrar meu nome</span>
-    </div>
-    <button onclick="startChat()">Entrar no Chat</button>
-    <div class="login-footer">
-        <button onclick="startAnonymous()">Continuar como visitante</button>
-    </div>
-</div>
-
-<div class="chat-container" id="chatContainer">
-    <div class="chat-header">
-        <img src="{{ url_for('static', filename='assets/ednna-avatar.png') }}" alt="Ednna" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiNmOTczMTYiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiNmYjkyM2MiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
-        <h2>Ednna Assistant</h2>
-    </div>
-    
-    <div class="chat-messages" id="chat-messages">
-        <div class="message bot-message">
-            <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <img src="{{ url_for('static', filename='assets/ednna-avat2.png') }}" alt="Ednna" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;">
-                <div>Olá! Eu sou a Ednna, assistente virtual da Netunna Software. Como posso ajudar?</div>
-            </div>
+    <!-- Modal de Login -->
+    <div id="loginModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:white; padding:30px; border-radius:10px; width:90%; max-width:400px; text-align:center;">
+            <h3>🔐 Identifique-se</h3>
+            <p style="color:#666;">Para salvar seu histórico</p>
+            <input type="text" id="nameInput" placeholder="Seu nome" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:6px;" />
+            <label style="display:flex; align-items:center; justify-content:center; margin:10px 0; font-size:0.9rem;">
+                <input type="checkbox" id="rememberName" /> Lembrar meu nome
+            </label>
+            <button onclick="saveLogin()" style="width:100%; padding:12px; background:#007bff; color:white; border:none; border-radius:6px; font-weight:bold;">Entrar</button>
+            <button onclick="closeLogin()" style="margin-top:10px; background:#6c757d;">Cancelar</button>
         </div>
     </div>
-    
-    <div class="chat-input">
-        <input type="text" id="user-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
-        <button onclick="sendMessage()">Enviar</button>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-header-left">
+                <img src="{{ url_for('static', filename='assets/ednna-avatar.png') }}" alt="Ednna" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiNmOTczMTYiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiNmYjkyM2MiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
+                <h2>Ednna Assistant</h2>
+            </div>
+            <button class="login-btn" onclick="openLogin()">👤 Login</button>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <img src="{{ url_for('static', filename='assets/ednna-avat2.png') }}" alt="Ednna" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;">
+                    <div>Olá! Eu sou a Ednna, assistente virtual da Netunna Software. Como posso ajudar?</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
     </div>
-</div>
 
-<footer>
-    Netunna Software © 2025
-</footer>
+    <footer>
+        Netunna Software © 2025
+    </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
-    let userName = null;
-    let isAnonymous = false;
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        let userName = null;
 
-    // Carrega nome salvo
-    window.onload = () => {
-        const savedName = localStorage.getItem('savedUserName');
-        if (savedName) {
-            document.getElementById('nameInput').value = savedName;
-            document.getElementById('rememberName').checked = true;
-        }
-    };
-
-    function startChat() {
-        const name = document.getElementById('nameInput').value.trim();
-        const remember = document.getElementById('rememberName').checked;
-
-        if (!name) {
-            alert("Por favor, digite seu nome.");
-            return;
-        }
-
-        userName = name;
-        isAnonymous = false;
-
-        if (remember) {
-            localStorage.setItem('savedUserName', name);
-        } else {
-            localStorage.removeItem('savedUserName');
-        }
-
-        showChat();
-    }
-
-    function startAnonymous() {
-        userName = "Anônimo";
-        isAnonymous = true;
-        showChat();
-    }
-
-    function showChat() {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('chatContainer').style.display = 'flex';
-
-        // Recupera histórico do sessionStorage
-        const savedHistory = sessionStorage.getItem('chatHistory');
-        const chatMessages = document.getElementById('chatMessages');
-        if (savedHistory) {
-            const history = JSON.parse(savedHistory);
-            history.forEach(msg => addMessage(msg.text, msg.sender));
-        }
-    }
-
-    async function sendMessage() {
-        const input = document.getElementById('user-input');
-        const message = input.value.trim();
-        if (!message) return;
-
-        addMessage(message, 'user');
-        saveToHistory(message, 'user');
-        input.value = '';
-
-        const typingDiv = createTypingIndicator();
-        const chatMessages = document.getElementById('chat-messages');
-        chatMessages.appendChild(typingDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: message,
-                    user_id: getUserID()
-                })
-            });
-
-            typingDiv.remove();
-
-            const data = await response.json();
-            if (response.ok) {
-                addMessage(data.response, 'bot');
-                saveToHistory(data.response, 'bot');
-            } else {
-                addMessage('Desculpe, tive um problema interno.', 'bot');
+        window.onload = () => {
+            const savedName = localStorage.getItem('savedUserName');
+            if (savedName) {
+                userName = savedName;
+                updateHeader();
             }
-        } catch (error) {
-            typingDiv.remove();
-            addMessage('Erro de conexão. Verifique sua internet.', 'bot');
-        }
-    }
+        };
 
-    function createTypingIndicator() {
-        const div = document.createElement('div');
-        div.classList.add('message', 'bot-message');
-        div.innerHTML = '<em>Ednna está digitando...</em>';
-        return div;
-    }
-
-    function addMessage(text, sender) {
-        const chatMessages = document.getElementById('chat-messages');
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message');
-        messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
-
-        if (sender === 'bot') {
-            const container = document.createElement('div');
-            container.style.display = 'flex';
-            container.style.alignItems = 'flex-start';
-            container.style.gap = '12px';
-
-            const avatar = document.createElement('img');
-            avatar.src = "{{ url_for('static', filename='assets/ednna-avat2.png') }}";
-            avatar.alt = "Ednna";
-            avatar.style.width = "32px";
-            avatar.style.height = "32px";
-            avatar.style.borderRadius = "50%";
-            avatar.style.flexShrink = "0";
-
-            const content = document.createElement('div');
-            content.innerHTML = marked.parse(text);
-
-            container.appendChild(avatar);
-            container.appendChild(content);
-            messageDiv.appendChild(container);
-        } else {
-            messageDiv.textContent = text;
+        function openLogin() {
+            document.getElementById('loginModal').style.display = 'flex';
         }
 
-        chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function saveToHistory(text, sender) {
-        const history = JSON.parse(sessionStorage.getItem('chatHistory') || '[]');
-        history.push({ text, sender });
-        sessionStorage.setItem('chatHistory', JSON.stringify(history));
-    }
-
-    function handleKeyPress(e) {
-        if (e.key === 'Enter') sendMessage();
-    }
-
-    function getUserID() {
-        if (!sessionStorage.getItem('userSessionId')) {
-            const id = Math.random().toString(36).substr(2, 9);
-            sessionStorage.setItem('userSessionId', id);
+        function closeLogin() {
+            document.getElementById('loginModal').style.display = 'none';
         }
-        return sessionStorage.getItem('userSessionId');
-    }
-</script>
+
+        function saveLogin() {
+            const name = document.getElementById('nameInput').value.trim();
+            const remember = document.getElementById('rememberName').checked;
+
+            if (!name) {
+                alert("Por favor, digite seu nome.");
+                return;
+            }
+
+            userName = name;
+            if (remember) {
+                localStorage.setItem('savedUserName', name);
+            } else {
+                localStorage.removeItem('savedUserName');
+            }
+            closeLogin();
+            updateHeader();
+            addMessage(`Olá, ${name}! Que bom te ver. Como posso te ajudar hoje?`, 'bot');
+        }
+
+        function updateHeader() {
+            const btn = document.querySelector('.login-btn');
+            if (userName) {
+                btn.innerHTML = `<span class="user-badge">${userName}</span>`;
+                btn.onclick = null;
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            input.value = '';
+
+            const typingDiv = createTypingIndicator();
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        user_id: getUserID()
+                    })
+                });
+
+                typingDiv.remove();
+
+                const data = await response.json();
+                if (response.ok) {
+                    addMessage(data.response, 'bot');
+                } else {
+                    addMessage('Desculpe, tive um problema interno.', 'bot');
+                }
+            } catch (error) {
+                typingDiv.remove();
+                addMessage('Erro de conexão. Verifique sua internet.', 'bot');
+            }
+        }
+
+        function createTypingIndicator() {
+            const div = document.createElement('div');
+            div.classList.add('message', 'bot-message');
+            div.innerHTML = '<em>Ednna está digitando...</em>';
+            return div;
+        }
+
+        function addMessage(text, sender) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+
+            if (sender === 'bot') {
+                const container = document.createElement('div');
+                container.style.display = 'flex';
+                container.style.align-items = 'flex-start';
+                container.style.gap = '12px';
+
+                const avatar = document.createElement('img');
+                avatar.src = "{{ url_for('static', filename='assets/ednna-avat2.png') }}";
+                avatar.alt = "Ednna";
+                avatar.style.width = "32px";
+                avatar.style.height = "32px";
+                avatar.style.borderRadius = "50%";
+                avatar.style.flexShrink = "0";
+
+                const content = document.createElement('div');
+                content.innerHTML = marked.parse(text);
+
+                container.appendChild(avatar);
+                container.appendChild(content);
+                messageDiv.appendChild(container);
+            } else {
+                messageDiv.textContent = text;
+            }
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function getUserID() {
+            if (!sessionStorage.getItem('userSessionId')) {
+                const id = Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('userSessionId', id);
+            }
+            return sessionStorage.getItem('userSessionId');
+        }
+    </script>
 </body>
 </html>
