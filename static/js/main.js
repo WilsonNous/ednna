@@ -146,5 +146,16 @@ function getUserID() {
     }
     return sessionStorage.getItem('userSessionId');
 }
+
 // ✅ CORREÇÃO: Adiciona evento de clique ao botão "Enviar"
 document.getElementById('sendBtn').addEventListener('click', sendMessage);
+
+// 🔴 BOTÃO DE LOGOUT — REMOVE NOME E LIMPA HISTÓRICO LOCAL
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('savedUserName');
+    userName = null;
+    updateHeader();
+    addMessage("Você saiu da identificação. Agora estou em modo anônimo.", 'bot');
+    // Limpa histórico local (opcional)
+    sessionStorage.removeItem('chatHistory');
+});
