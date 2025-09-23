@@ -181,7 +181,6 @@
             font-size: 0.85rem;
         }
 
-        /* Estilo para Markdown */
         .bot-message strong {
             font-weight: 600;
             color: var(--orange);
@@ -201,7 +200,6 @@
             margin: 4px 0;
         }
 
-        /* Modal de Login */
         #loginModal {
             display: none;
             position: fixed;
@@ -293,12 +291,12 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-header-left">
-                <img src="{{ url_for('static', filename='assets/ednna-avatar.png') }}" alt="Ednna" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiNmOTczMTYiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiNmYjkyM2MiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
+                <img src="{{ url_for('static', filename='assets/ednna-avatar.png') }}" alt="Ednna" onerror="this.src='image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iMjAiIGZpbGw9IiNmOTczMTYiIGZpbGwtb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0xMiAzMkMxMiAyOCAyMCAzMiAyMCAzMkMyMCAzMiAyOCAyOCAyOCAzMkMyOCAzNiAyNCA0MCAyMCA0MEMxNiA0MCAxMiAzNiAxMiAzMloiIGZpbGw9IiNmYjkyM2MiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTE4IDMwQzE5IDMxIDIxIDMyIDIyIDMyQzIzIDMyIDI1IDMxIDI2IDMwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg=='">
                 <h2>Ednna Assistant</h2>
             </div>
             <button class="login-btn" onclick="openLogin()">👤 Login</button>
         </div>
-        
+
         <div class="chat-messages" id="chat-messages">
             <div class="message bot-message">
                 <div style="display: flex; align-items: flex-start; gap: 12px;">
@@ -307,7 +305,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="chat-input">
             <input type="text" id="user-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
             <button onclick="sendMessage()">Enviar</button>
@@ -320,7 +318,6 @@
 
     <!-- Carrega marked.js dinamicamente -->
     <script>
-        // Carrega marked.js via CDN
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
         script.onload = () => console.log('✅ marked.js carregado com sucesso');
@@ -331,7 +328,6 @@
     <script>
         let userName = null;
 
-        // Carrega nome salvo ao iniciar
         window.onload = () => {
             const savedName = localStorage.getItem('savedUserName');
             if (savedName) {
@@ -340,17 +336,14 @@
             }
         };
 
-        // Abre modal de login
         function openLogin() {
             document.getElementById('loginModal').style.display = 'flex';
         }
 
-        // Fecha modal
         function closeLogin() {
             document.getElementById('loginModal').style.display = 'none';
         }
 
-        // Salva login
         function saveLogin() {
             const name = document.getElementById('nameInput').value.trim();
             const remember = document.getElementById('rememberName').checked;
@@ -366,125 +359,15 @@
             } else {
                 localStorage.removeItem('savedUserName');
             }
-
             closeLogin();
             updateHeader();
             addMessage(`Olá, ${name}! Que bom te ver. Como posso te ajudar hoje?`, 'bot');
         }
 
-        // Atualiza cabeçalho com nome
         function updateHeader() {
             const btn = document.querySelector('.login-btn');
             if (userName && btn) {
                 btn.innerHTML = `<span class="user-badge">${userName}</span>`;
-                btn.onclick = null; // Desativa clique após login
+                btn.onclick = null;
             }
-        }
-
-        // Envia mensagem para backend
-        async function sendMessage() {
-            const input = document.getElementById('user-input');
-            const message = input.value.trim();
-            if (!message) return;
-
-            addMessage(message, 'user');
-            input.value = '';
-
-            const typingDiv = createTypingIndicator();
-            const chatMessages = document.getElementById('chat-messages');
-            chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: message,
-                        user_id: getUserID()
-                    })
-                });
-
-                typingDiv.remove();
-
-                const data = await response.json();
-                if (response.ok) {
-                    addMessage(data.response, 'bot');
-                } else {
-                    addMessage('Desculpe, tive um problema interno.', 'bot');
-                }
-            } catch (error) {
-                typingDiv.remove();
-                addMessage('Erro de conexão. Verifique sua internet.', 'bot');
-            }
-        }
-
-        // Indicador de digitação
-        function createTypingIndicator() {
-            const div = document.createElement('div');
-            div.classList.add('message', 'bot-message');
-            div.innerHTML = '<em>Ednna está digitando...</em>';
-            return div;
-        }
-
-        // Adiciona mensagem ao chat
-        function addMessage(text, sender) {
-            const chatMessages = document.getElementById('chat-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
-            messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
-
-            if (sender === 'bot') {
-                const container = document.createElement('div');
-                container.style.display = 'flex';
-                container.style.align-items = 'flex-start';
-                container.style.gap = '12px';
-
-                const avatar = document.createElement('img');
-                avatar.src = "{{ url_for('static', filename='assets/ednna-avat2.png') }}";
-                avatar.alt = "Ednna";
-                avatar.style.width = "32px";
-                avatar.style.height = "32px";
-                avatar.style.borderRadius = "50%";
-                avatar.style.flexShrink = "0";
-
-                const content = document.createElement('div');
-
-                // Usa marked se disponível
-                if (typeof marked !== 'undefined') {
-                    try {
-                        content.innerHTML = marked.parse(text);
-                    } catch (e) {
-                        content.textContent = text;
-                    }
-                } else {
-                    content.textContent = text;
-                }
-
-                container.appendChild(avatar);
-                container.appendChild(content);
-                messageDiv.appendChild(container);
-            } else {
-                messageDiv.textContent = text;
-            }
-
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Envia com Enter
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') sendMessage();
-        }
-
-        // Gera ID único por sessão
-        function getUserID() {
-            if (!sessionStorage.getItem('userSessionId')) {
-                const id = Math.random().toString(36).substr(2, 9);
-                sessionStorage.setItem('userSessionId', id);
-            }
-            return sessionStorage.getItem('userSessionId');
-        }
-    </script>
-</body>
-</html>
+       
