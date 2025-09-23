@@ -131,9 +131,13 @@ function addMessage(text, sender) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function handleKeyPress(e) {
-    if (e.key === 'Enter') sendMessage();
-}
+// ✅ VINCULA O EVENTO DE ENTER AO CAMPO DE ENTRADA
+document.getElementById('user-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Evita submit de formulário (caso esteja em form)
+        sendMessage();
+    }
+});
 
 function getUserID() {
     if (!sessionStorage.getItem('userSessionId')) {
