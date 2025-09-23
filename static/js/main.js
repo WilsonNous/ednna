@@ -142,3 +142,5 @@ function getUserID() {
     }
     return sessionStorage.getItem('userSessionId');
 }
+// ✅ CORREÇÃO: Adiciona evento de clique ao botão "Enviar"
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
