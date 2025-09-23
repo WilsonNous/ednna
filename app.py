@@ -69,7 +69,7 @@ def chat():
         if not data:
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
-        user_id = data.get('user_id', 1)
+        user_id = data.get('user_id', 'anonymous')
         if not user_message:
             return jsonify({'error': 'Mensagem vazia'}), 400
 
@@ -130,14 +130,12 @@ def dashboard():
 
     cursor = conn.cursor(dictionary=True)
     try:
-        # Métricas simples
         cursor.execute("SELECT COUNT(*) as total FROM messages WHERE is_from_user = 1")
         total_respondidas = cursor.fetchone()['total']
 
         cursor.execute("SELECT COUNT(*) as total FROM unknown_questions WHERE status = 'pending'")
         total_pendentes = cursor.fetchone()['total']
 
-        # Perguntas frequentes não respondidas (últimas 10 horas)
         cursor.execute("""
             SELECT question, COUNT(*) as count FROM unknown_questions 
             WHERE created_at > DATE_SUB(NOW(), INTERVAL 10 HOUR)
@@ -195,18 +193,15 @@ def teach_ednna():
 
     cursor = conn.cursor()
     try:
-        # Gerar keywords
         words = re.findall(r'\w{5,}', a.lower())
         keywords = ",".join(set(words[:10])) or "geral"
 
-        # Inserir ou atualizar
         cursor.execute("""
             INSERT INTO knowledge_base (question, answer, category, keywords, created_at, updated_at)
             VALUES (%s, %s, %s, %s, NOW(), NOW())
             ON DUPLICATE KEY UPDATE answer = VALUES(answer), updated_at = NOW()
         """, (q, a, c, keywords))
 
-        # Marcar como respondida
         cursor.execute("UPDATE unknown_questions SET status = 'answered' WHERE question = %s", (q,))
         conn.commit()
         return jsonify({"status": "success"})
@@ -407,7 +402,7 @@ def get_chat_response(message, user_id, last_user_question=None):
             return {'response': resposta_final, 'intent': result['category'], 'confidence': 0.9}
 
         # 📚 APRENDIZADO ATIVO
-        short_question = message[:255]  # Evita exceder limite
+        short_question = message[:255]
         cursor.execute("""
             SELECT id FROM unknown_questions 
             WHERE question = %s AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
@@ -420,7 +415,7 @@ def get_chat_response(message, user_id, last_user_question=None):
             """, (user_id, short_question, cid))
             conn.commit()
 
-        # 💡 SUGESTÃO INTELIGENTE (sem mandar para site)
+        # 💡 SUGESTÃO INTELIGENTE
         if intencao_atual == 'edi':
             sugestao = "Posso explicar as 4 fases do processo de EDI?"
         elif intencao_atual == 'teia_card':
@@ -452,4 +447,3 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
