@@ -56,7 +56,8 @@ def health_check():
     try:
         conn = get_db_connection()
         status = 'healthy' if conn and conn.is_connected() else 'degraded'
-        if conn: conn.close()
+        if conn:
+            conn.close()
         return jsonify({'status': status}), 200
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
@@ -82,7 +83,8 @@ def chat():
             'timestamp': str(datetime.now())
         })
 
-        last_question = session['conversation_history'][-2]['text'] if len(session['conversation_history']) > 1 else None
+        last_question = session['conversation_history'][-2]['text'] \
+            if len(session['conversation_history']) > 1 else None
         response = get_chat_response(user_message, user_id, last_question)
 
         session['conversation_history'].append({
@@ -112,8 +114,10 @@ def admin_login():
         <html><body style="font-family:Arial;text-align:center;padding:50px;">
             <h3>🔐 Login Admin</h3>
             <form method="post" style="display:inline-block;text-align:left;">
-                <input type="password" name="password" placeholder="Senha" required style="padding:10px;width:300px;"><br><br>
-                <button type="submit" style="padding:10px 20px;background:#007bff;color:white;border:none;">Entrar</button>
+                <input type="password" name="password" placeholder="Senha" required style="padding:10px;width:300px;">
+                <br><br>
+                <button type="submit" style="padding:10px 20px;background:#007bff;color:white;border:none;"
+                >Entrar</button>
             </form>
         </body></html>
     '''
@@ -216,9 +220,9 @@ def ver_conversa(conversation_id):
         mensagens = cursor.fetchall()
 
         return render_template('conversa_detalhe.html',
-                             conversa=conversa,
-                             perfil=perfil,
-                             mensagens=mensagens)
+                               conversa=conversa,
+                               perfil=perfil,
+                               mensagens=mensagens)
     finally:
         cursor.close()
         conn.close()
@@ -343,7 +347,8 @@ def get_or_create_user_profile(user_id, connection):
         logger.error(f"Erro ao buscar perfil: {e}")
         return {'user_id': user_id}
     finally:
-        if cursor: cursor.close()
+        if cursor:
+            cursor.close()
 
 
 def update_user_profile(user_id, updates, connection):
@@ -358,7 +363,8 @@ def update_user_profile(user_id, updates, connection):
     except Error as e:
         logger.error(f"Erro ao atualizar perfil: {e}")
     finally:
-        if cursor: cursor.close()
+        if cursor:
+            cursor.close()
 
 
 def get_or_create_conversation(user_id, connection):
@@ -372,14 +378,16 @@ def get_or_create_conversation(user_id, connection):
         result = cursor.fetchone()
         if result:
             return result[0]
-        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')", (user_id,))
+        cursor.execute("INSERT INTO conversations (user_id, started_at, status) VALUES (%s, NOW(), 'active')",
+                       (user_id,))
         connection.commit()
         return cursor.lastrowid
     except Error as e:
         logger.error(f"Erro ao criar conversa: {e}")
         return 1
     finally:
-        if cursor: cursor.close()
+        if cursor:
+            cursor.close()
 
 
 def log_message(conversation_id, message, is_from_user, connection):
@@ -392,7 +400,26 @@ def log_message(conversation_id, message, is_from_user, connection):
     except Error as e:
         logger.error(f"Erro ao registrar mensagem: {e}")
     finally:
-        if cursor: cursor.close()
+        if cursor:
+            cursor.close()
+
+
+def get_ia_response(prompt):
+    try:
+        import requests
+        resp = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "llama3.2",
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=10
+        )
+        return resp.json().get("response", "").strip()
+    except Exception as e:
+        logger.error(f"Erro ao chamar Ollama: {e}")
+        return None
 
 
 # === RESPOSTA INTELIGENTE COM CONTEXTO ===
@@ -418,15 +445,15 @@ def get_chat_response(message, user_id, last_user_question=None):
         for err, cor in terms.items():
             norm = norm.replace(err, cor)
 
-        # 🔁 Mantém foco no tema (EDI, Teia Card, etc)
+        # 🔁 MANTÉM FOCO NO TEMA ATUAL
         intencao_atual = None
         if last_user_question:
-            if 'edi' in last_user_question.lower():
+            if any(word in last_user_question.lower() for word in ['edi', 'interchange', 'sftp', 'van']):
                 intencao_atual = 'edi'
-            elif 'teia card' in last_user_question.lower():
+            elif any(word in last_user_question.lower() for word in ['boletos', 'pix', 'cofre', 'carro forte']):
+                intencao_atual = 'teia_values'
+            elif any(word in last_user_question.lower() for word in ['cartão', 'cielo', 'rede', 'stone']):
                 intencao_atual = 'teia_card'
-            elif 'bpo' in last_user_question.lower():
-                intencao_atual = 'bpo'
 
         # ✅ SAUDAÇÕES
         saudacoes = ['oi', 'olá', 'bom dia', 'boa tarde', 'tudo bem']
@@ -465,15 +492,12 @@ def get_chat_response(message, user_id, last_user_question=None):
         # 🔍 BUSCA POR INTENÇÃO
         result = None
         if intencao_atual:
-            try:
-                cursor.execute("""
-                    SELECT answer, category FROM knowledge_base 
-                    WHERE category = %s AND (question LIKE %s OR keywords LIKE %s)
-                    ORDER BY updated_at DESC LIMIT 1
-                """, (intencao_atual, f'%{norm}%', f'%{norm}%'))
-                result = cursor.fetchone()
-            except Error as e:
-                logger.error(f"Erro na busca por intenção: {e}")
+            cursor.execute("""
+                SELECT answer, category FROM knowledge_base 
+                WHERE category = %s AND (question LIKE %s OR keywords LIKE %s)
+                ORDER BY updated_at DESC LIMIT 1
+            """, (intencao_atual, f'%{norm}%', f'%{norm}%'))
+            result = cursor.fetchone()
 
         # 🔍 Busca geral
         if not result:
@@ -503,6 +527,25 @@ def get_chat_response(message, user_id, last_user_question=None):
                 result = cursor.fetchone()
             except Exception as e:
                 logger.error(f"Erro na busca full-text: {e}")
+
+        # Após todas as buscas
+        if not result:
+            ia_prompt = f"""
+            Você é Ednna, assistente da Netunna. Responda com base nos dados reais.
+
+            Pergunta: {message}
+            Última pergunta: {last_user_question or 'Nenhuma'}
+
+            Seja técnico, claro e mencione produtos como Teia Card, Teia Values ou BPO.
+
+            Resposta:
+            """
+            ia_answer = get_ia_response(ia_prompt)
+            if ia_answer:
+                return {
+                    'response': f"{ia_answer}\n\n💡 *Resposta gerada com IA. Quer que eu salve no conhecimento?*",
+                    'intent': 'ia_suggestion'
+                }
 
         # ✅ RESPOSTA ENCONTRADA
         if result:
@@ -543,8 +586,10 @@ def get_chat_response(message, user_id, last_user_question=None):
         logger.error(f"Erro no banco: {e}")
         return {'response': 'Erro ao processar', 'intent': 'error'}
     finally:
-        if cursor: cursor.close()
-        if conn and conn.is_connected(): conn.close()
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
 
 
 # Protege rotas admin
@@ -558,4 +603,3 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
