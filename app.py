@@ -328,6 +328,39 @@ def teach_ednna():
         conn.close()
 
 
+@app.route('/api/audit', methods=['GET'])
+def audit():
+    """Endpoint para auditoria de perguntas e respostas"""
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        query = """
+            SELECT 
+                u.message_text AS pergunta,
+                b.message_text AS resposta,
+                u.sent_at AS data
+            FROM messages u
+            JOIN messages b 
+                ON b.conversation_id = u.conversation_id 
+                AND b.id > u.id
+                AND b.is_from_user = 0
+            WHERE u.is_from_user = 1
+            ORDER BY u.sent_at DESC
+            LIMIT 500
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+        return jsonify(results)
+    except Error as e:
+        logger.error(f"Erro ao gerar auditoria: {e}")
+        return jsonify({'error': 'Erro ao gerar auditoria'}), 500
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
 # === FUNÇÕES AUXILIARES ===
 
 def get_or_create_user_profile(user_id, connection):
@@ -603,3 +636,4 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
