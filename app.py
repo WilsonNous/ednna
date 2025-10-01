@@ -70,8 +70,14 @@ def chat():
         if not data:
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
+        if not ensure_user_exists(user_id):
+            user_id = DEFAULT_USER_ID
+
         DEFAULT_USER_ID = 99
-        user_id = data.get('user_id', DEFAULT_USER_ID)
+        try:
+            user_id = int(data.get('user_id', DEFAULT_USER_ID))
+        except (ValueError, TypeError):
+            user_id = DEFAULT_USER_ID
 
         if not user_message:
             return jsonify({'error': 'Mensagem vazia'}), 400
@@ -461,6 +467,14 @@ def get_ia_response(prompt):
         logger.error(f"Erro ao chamar Ollama: {e}")
         return None
 
+def ensure_user_exists(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return result is not None
 
 # === RESPOSTA INTELIGENTE COM CONTEXTO ===
 
@@ -643,6 +657,7 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
