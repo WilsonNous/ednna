@@ -70,7 +70,9 @@ def chat():
         if not data:
             return jsonify({'error': 'JSON inválido'}), 400
         user_message = data.get('message', '').strip()
-        user_id = data.get('user_id', 'anonymous')
+        DEFAULT_USER_ID = 99
+        user_id = data.get('user_id', DEFAULT_USER_ID)
+
         if not user_message:
             return jsonify({'error': 'Mensagem vazia'}), 400
 
@@ -641,5 +643,6 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
