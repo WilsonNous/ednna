@@ -99,6 +99,11 @@ def chat():
         return jsonify({'error': 'Erro interno'}), 500
 
 
+@app.route('/audit')
+def audit_page():
+    return render_template('audit.html')
+
+
 # === ROTAS ADMINISTRATIVAS ===
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -636,4 +641,5 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
