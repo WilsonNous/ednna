@@ -569,7 +569,7 @@ def get_chat_response(message, user_id, last_user_question=None):
         # 🔍 Full-text como fallback
         if not result and len(norm.split()) > 1:
             try:
-                safe_norm = conn.converter.escape(norm)
+                safe_norm = norm.replace("'", "\\'").replace('"', '\\"')
                 query_fulltext = f"""
                     SELECT answer, category,
                            MATCH(question, keywords, answer) AGAINST('{safe_norm}' IN NATURAL LANGUAGE MODE) as score
@@ -658,6 +658,7 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
