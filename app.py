@@ -595,12 +595,7 @@ def get_chat_response(message, user_id, last_user_question=None):
 
             Resposta:
             """
-            ia_answer = get_ia_response(ia_prompt)
-            if ia_answer:
-                return {
-                    'response': f"{ia_answer}\n\n💡 *Resposta gerada com IA. Quer que eu salve no conhecimento?*",
-                    'intent': 'ia_suggestion'
-                }
+            ia_answer = None
 
         # ✅ RESPOSTA ENCONTRADA
         if result:
@@ -658,6 +653,7 @@ def require_login():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
