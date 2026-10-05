@@ -42,3 +42,18 @@ def build_planner():
     from .orchestration.planner import Planner
 
     return Planner(CapabilityDiscovery(build_registry()))
+
+
+def build_executor(clients=None):
+    """Build the governed planner/executor pipeline."""
+    from .governance.policies import GovernancePolicyRegistry
+    from .orchestration.discovery import CapabilityDiscovery
+    from .orchestration.executor import PlanExecutor
+    from .orchestration.planner import Planner
+    from .orchestration.service import OrchestrationService
+
+    registry = build_registry()
+    gateway = build_gateway(clients=clients, registry=registry)
+    planner = Planner(CapabilityDiscovery(registry))
+    service = OrchestrationService(gateway, GovernancePolicyRegistry())
+    return PlanExecutor(planner, service)
