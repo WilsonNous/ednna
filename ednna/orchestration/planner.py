@@ -33,8 +33,12 @@ class Planner:
         self._minimum_score = minimum_score
         self._maximum_steps = maximum_steps
 
-    def plan(self, goal: str) -> OrchestrationPlan:
-        matches = self._discovery.search(goal, limit=self._maximum_steps)
+    def plan(
+        self,
+        goal: str,
+        include_actions: bool = False,
+    ) -> OrchestrationPlan:
+        matches = self._discovery.search(goal, limit=self._maximum_steps * 2)
         steps = tuple(
             PlanStep(
                 specialist_id=match.specialist_id,
@@ -44,5 +48,6 @@ class Planner:
             )
             for match in matches
             if match.score >= self._minimum_score
-        )
+            and (include_actions or match.capability.kind is OperationKind.QUERY)
+        )[: self._maximum_steps]
         return OrchestrationPlan(goal=goal, steps=steps)
