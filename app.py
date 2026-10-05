@@ -60,7 +60,8 @@ def health_check():
             conn.close()
         return jsonify({'status': status}), 200
     except Exception as e:
-        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+        logger.exception("Health check failed")
+        return jsonify({'status': 'unhealthy'}), 500
 
 
 @app.route('/api/chat', methods=['POST'])
@@ -119,7 +120,7 @@ def audit_page():
 def admin_login():
     if request.method == 'POST':
         password = request.form.get('password')
-        correct_password = os.getenv('ADMIN_PASSWORD', 'netunna123')
+        correct_password = require_env('ADMIN_PASSWORD')
         if password == correct_password:
             session['admin_logged_in'] = True
             return redirect(url_for('learn_dashboard'))
