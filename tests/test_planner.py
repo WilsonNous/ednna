@@ -19,3 +19,13 @@ def test_planner_does_not_invent_capabilities():
     plan = planner.plan("qual é o faturamento do cliente")
 
     assert plan.steps == ()
+
+
+def test_planner_excludes_actions_by_default():
+    planner = Planner(CapabilityDiscovery(build_registry()))
+
+    plan = planner.plan("qual o estado geral da operação EDI")
+
+    assert plan.steps
+    assert all(step.operation.value == "query" for step in plan.steps)
+    assert all(step.capability != "edi.operation.execute" for step in plan.steps)
