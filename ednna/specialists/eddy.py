@@ -27,5 +27,10 @@ EDDY_DESCRIPTOR = SpecialistDescriptor(
             kind=OperationKind.QUERY,
             description="Listar regras EDI e seus estados de aprendizagem/homologação.",
         ),
+        Capability(
+            name="edi.operation.execute",
+            kind=OperationKind.ACTION,
+            description="Executar uma operação EDI previamente autorizada e idempotente.",
+        ),
     ),
 )
