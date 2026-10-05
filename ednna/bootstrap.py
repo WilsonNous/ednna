@@ -27,3 +27,10 @@ def build_gateway(
         gateway.register_client(specialist_id, client)
 
     return gateway
+
+
+def build_eddy_gateway() -> IntelligenceGateway:
+    """Build a gateway with the EDDY HTTP transport enabled by environment config."""
+    from .specialists.eddy_client import build_eddy_client
+
+    return build_gateway(clients={"eddy": build_eddy_client()})
