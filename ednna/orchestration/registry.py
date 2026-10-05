@@ -30,6 +30,12 @@ class SpecialistRegistry:
                     f"Capability '{capability.name}' is already owned by '{owner}'"
                 )
 
+        previous = self._specialists.get(specialist.specialist_id)
+        if previous:
+            for capability in previous.capabilities:
+                if self._capability_owners.get(capability.name) == specialist.specialist_id:
+                    del self._capability_owners[capability.name]
+
         self._specialists[specialist.specialist_id] = specialist
         for capability in specialist.capabilities:
             self._capability_owners[capability.name] = specialist.specialist_id
