@@ -4,7 +4,7 @@ New EDNNA code should import from ednna.settings directly.
 """
 
 from ednna.infrastructure.database import build_mysql_config
-from ednna.settings import DatabaseSettings, require_env
+from ednna.settings import DatabaseSettings
 
 
 DB_CONFIG = build_mysql_config(DatabaseSettings.from_env())
