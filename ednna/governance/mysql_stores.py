@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from mysql.connector import IntegrityError
+
 from ednna.infrastructure.database import connect_mysql
 from ednna.settings import DatabaseSettings
 
@@ -92,7 +94,7 @@ class MySQLIdempotencyStore:
                 (key,),
             )
             connection.commit()
-        except Exception as exc:
+        except IntegrityError as exc:
             connection.rollback()
             raise DuplicateActionError(
                 f"Duplicate action blocked for idempotency key '{key}'"
