@@ -42,3 +42,22 @@ def test_registry_raises_for_unknown_capability():
 
     with pytest.raises(CapabilityNotFoundError):
         registry.resolve("finance.status.get")
+
+
+def test_reregister_specialist_removes_stale_capabilities():
+    registry = SpecialistRegistry()
+    registry.register(EDDY_DESCRIPTOR)
+
+    replacement = SpecialistDescriptor(
+        specialist_id="eddy",
+        name="EDDY",
+        domain="edi",
+        description="replacement",
+        capabilities=(
+            Capability("edi.status.get", OperationKind.QUERY),
+        ),
+    )
+    registry.register(replacement)
+
+    with pytest.raises(CapabilityNotFoundError):
+        registry.resolve("edi.issue.inspect")
