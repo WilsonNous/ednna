@@ -34,3 +34,11 @@ def build_eddy_gateway() -> IntelligenceGateway:
     from .specialists.eddy_client import build_eddy_client
 
     return build_gateway(clients={"eddy": build_eddy_client()})
+
+
+def build_planner():
+    """Build the deterministic capability planner."""
+    from .orchestration.discovery import CapabilityDiscovery
+    from .orchestration.planner import Planner
+
+    return Planner(CapabilityDiscovery(build_registry()))
