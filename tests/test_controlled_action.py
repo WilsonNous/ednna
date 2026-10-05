@@ -91,3 +91,36 @@ def test_duplicate_idempotency_key_is_blocked():
 
     with pytest.raises(DuplicateActionError):
         store.reserve("same-key")
+
+
+def test_controlled_service_rejects_capability_mismatch_before_dispatch():
+    from ednna.orchestration.controlled_action import (
+        ActionCapabilityMismatchError,
+        ControlledActionService,
+    )
+    from ednna.orchestration.contracts import IntelligenceRequest
+    from ednna.orchestration.gateway import IntelligenceGateway
+    from ednna.orchestration.registry import SpecialistRegistry
+    from ednna.specialists.eddy import EDDY_DESCRIPTOR
+
+    registry = SpecialistRegistry()
+    registry.register(EDDY_DESCRIPTOR)
+    gateway = IntelligenceGateway(registry)
+    authorizer, _ = build_authorizer()
+    service = ControlledActionService(
+        gateway,
+        authorizer,
+        InMemoryIdempotencyStore(),
+    )
+
+    with pytest.raises(ActionCapabilityMismatchError):
+        service.execute(
+            IntelligenceRequest(
+                capability="edi.operation.execute",
+                input={},
+            ),
+            ActionAuthorization(
+                capability="edi.status.get",
+                idempotency_key="k1",
+            ),
+        )
