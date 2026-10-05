@@ -35,7 +35,7 @@ jobs:
         run: pip check
 
       - name: Lint
-        run: ruff check .
+        run: ruff check ednna tests config.py
 
       - name: Run tests
         run: pytest -q
