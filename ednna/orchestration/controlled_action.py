@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
 from ednna.governance.action_control import ActionAuthorization, ActionAuthorizer
 from ednna.governance.idempotency import IdempotencyStore
 from ednna.observability.tracing import ensure_trace
 
-from .contracts import IntelligenceRequest, IntelligenceResponse
-from .service import OrchestrationService
+from .contracts import IntelligenceRequest, IntelligenceResponse, OperationKind
+from .gateway import IntelligenceGateway
+
+
+class ActionCapabilityMismatchError(ValueError):
+    pass
 
 
 class ControlledActionService:
@@ -15,11 +17,11 @@ class ControlledActionService:
 
     def __init__(
         self,
-        orchestration: OrchestrationService,
+        gateway: IntelligenceGateway,
         authorizer: ActionAuthorizer,
         idempotency: IdempotencyStore,
     ) -> None:
-        self._orchestration = orchestration
+        self._gateway = gateway
         self._authorizer = authorizer
         self._idempotency = idempotency
 
@@ -29,12 +31,12 @@ class ControlledActionService:
         authorization: ActionAuthorization,
     ) -> IntelligenceResponse:
         traced = ensure_trace(request)
+
         if traced.capability != authorization.capability:
-            authorization = replace(
-                authorization,
-                capability=traced.capability,
+            raise ActionCapabilityMismatchError(
+                "Authorization capability does not match requested action"
             )
 
         self._authorizer.authorize(authorization)
         self._idempotency.reserve(authorization.idempotency_key)
-        return self._orchestration.action(traced)
+        return self._gateway.dispatch(traced, OperationKind.ACTION)
