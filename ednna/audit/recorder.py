@@ -58,3 +58,25 @@ class AuditRecorder:
                 },
             )
         )
+
+    def record_failure(
+        self,
+        event_type: str,
+        request: IntelligenceRequest,
+        exc: Exception,
+    ) -> None:
+        if request.trace_id is None:
+            return
+
+        self._store.append(
+            AuditEvent(
+                event_type=event_type,
+                trace_id=request.trace_id,
+                user_id=request.user_id,
+                tenant_id=request.tenant_id,
+                conversation_id=request.conversation_id,
+                capability=request.capability,
+                status="failed",
+                details={"error_type": type(exc).__name__},
+            )
+        )
