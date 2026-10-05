@@ -33,3 +33,21 @@ def test_audit_recorder_stores_request_and_response_without_payload_contents():
     assert "value" not in str(events)
     assert "must-not-be-audited" not in str(events)
     assert events[1].details["evidence_count"] == 1
+
+
+def test_failure_audit_records_exception_type_only():
+    store = InMemoryAuditStore()
+    recorder = AuditRecorder(store)
+    request = IntelligenceRequest(
+        capability="edi.status.get",
+        input={"token": "do-not-store"},
+        trace_id="trace-failure",
+    )
+
+    recorder.record_failure("query.failed", request, RuntimeError("sensitive details"))
+
+    events = store.list_by_trace("trace-failure")
+    assert len(events) == 1
+    assert events[0].details == {"error_type": "RuntimeError"}
+    assert "sensitive details" not in str(events)
+    assert "do-not-store" not in str(events)
