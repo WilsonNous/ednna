@@ -19,6 +19,7 @@ from ednna.governance.action_execution import (
 )
 from ednna.governance.idempotency import DuplicateActionError, IdempotencyStore
 from ednna.governance.policies import CapabilityPolicy, GovernancePolicyRegistry
+from ednna.governance.reconciliation_proposal import ReconciliationProposalService
 from ednna.identity.authorization import AuthorizationDeniedError, AuthorizationService
 from ednna.identity.flask_auth import require_auth
 from ednna.identity.oidc import OIDCAuthenticator
@@ -51,6 +52,7 @@ def create_action_blueprint(
     authenticated = require_auth(authenticator)
     authorizer = ActionAuthorizer(build_action_policies(), approvals)
     controlled = ControlledActionService(gateway, authorizer, idempotency, ledger)
+    proposal_service = ReconciliationProposalService()
 
     @blueprint.get("/executions/<path:idempotency_key>")
     @authenticated
@@ -132,6 +134,8 @@ def create_action_blueprint(
         except Exception:
             return jsonify({"error": "specialist status lookup failed"}), 502
 
+        proposal = proposal_service.propose(specialist_status)
+
         return jsonify(
             {
                 "idempotency_key": specialist_status.idempotency_key,
@@ -141,6 +145,13 @@ def create_action_blueprint(
                 "evidence": list(specialist_status.evidence),
                 "reference": specialist_status.reference,
                 "ledger_status": current.status.value,
+                "proposal": {
+                    "kind": proposal.kind.value,
+                    "automatic": proposal.automatic,
+                    "reason_code": proposal.reason_code,
+                    "evidence_count": proposal.evidence_count,
+                    "reference": proposal.reference,
+                },
             }
         )
 
