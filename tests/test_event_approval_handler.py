@@ -1,10 +1,23 @@
 from ednna.events.approval_handler import ApprovalEventHandler
 from ednna.events.contracts import IntelligenceEvent
-from ednna.governance.approvals import InMemoryApprovalStore
+
+
+class CaptureApprovalStore:
+    def __init__(self):
+        self.saved = []
+
+    def save(self, approval):
+        self.saved.append(approval)
+
+    def get(self, approval_id):
+        return next(
+            (item for item in self.saved if item.approval_id == approval_id),
+            None,
+        )
 
 
 def test_mapped_event_creates_human_approval_for_fixed_capability():
-    approvals = InMemoryApprovalStore()
+    approvals = CaptureApprovalStore()
     handler = ApprovalEventHandler(approvals)
     event = IntelligenceEvent.create(
         event_type="edi.operation.approval_required",
@@ -20,9 +33,8 @@ def test_mapped_event_creates_human_approval_for_fixed_capability():
 
     handler(event)
 
-    items = list(approvals._items.values())
-    assert len(items) == 1
-    approval = items[0]
+    assert len(approvals.saved) == 1
+    approval = approvals.saved[0]
     assert approval.capability == "edi.operation.execute"
     assert approval.specialist_id == "eddy"
     assert approval.tenant_id == "tenant-1"
@@ -30,7 +42,7 @@ def test_mapped_event_creates_human_approval_for_fixed_capability():
 
 
 def test_unmapped_event_does_not_create_approval():
-    approvals = InMemoryApprovalStore()
+    approvals = CaptureApprovalStore()
     handler = ApprovalEventHandler(approvals)
     event = IntelligenceEvent.create(
         event_type="edi.status.changed",
@@ -41,4 +53,4 @@ def test_unmapped_event_does_not_create_approval():
 
     handler(event)
 
-    assert approvals._items == {}
+    assert approvals.saved == []
