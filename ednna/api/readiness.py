@@ -17,7 +17,7 @@ def create_readiness_blueprint() -> Blueprint:
                 {
                     "component": check.component,
                     "ready": check.ready,
-                    "reason": check.reason,
+                    "reason": None if check.ready else "configuration_missing",
                 }
                 for check in report.checks
             ],
