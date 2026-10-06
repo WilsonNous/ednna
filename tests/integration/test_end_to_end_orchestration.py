@@ -1,6 +1,10 @@
 from datetime import datetime, timezone
 
-from ednna.governance.action_control import ActionAuthorization, ActionAuthorizer
+from ednna.governance.action_control import (
+    ActionAuthorization,
+    ActionAuthorizer,
+    HumanApprovalRequiredError,
+)
 from ednna.governance.approvals import (
     ApprovalRequest,
     ApprovalStatus,
@@ -224,7 +228,7 @@ def test_approved_decision_cannot_authorize_second_action_key():
             ),
         )
         raised = False
-    except Exception:
+    except HumanApprovalRequiredError:
         raised = True
 
     assert raised is True
