@@ -5,7 +5,7 @@ from typing import Protocol
 from ednna.orchestration.registry import SpecialistRegistry
 from ednna.specialists.availability import (
     SpecialistAvailability,
-    SpecialistAvailabilityRegistry,
+    SpecialistAvailabilityStore,
 )
 from ednna.specialists.handshake import (
     SpecialistHandshake,
@@ -26,14 +26,14 @@ class SpecialistAvailabilityRefresher:
     def __init__(
         self,
         registry: SpecialistRegistry,
-        availability: SpecialistAvailabilityRegistry,
+        availability: SpecialistAvailabilityStore,
         clients: dict[str, HandshakeClient],
     ) -> None:
         self._registry = registry
         self._availability = availability
         self._clients = clients
 
-    def refresh(self) -> SpecialistAvailabilityRegistry:
+    def refresh(self) -> SpecialistAvailabilityStore:
         for specialist in self._registry.list_specialists():
             client = self._clients.get(specialist.specialist_id)
             if client is None:
