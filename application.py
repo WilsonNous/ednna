@@ -1,0 +1,56 @@
+from app import app
+from ednna.api.eddy_query import create_eddy_query_blueprint
+from ednna.api.orchestration import create_orchestration_blueprint
+from ednna.governance.action_feature_flags import action_api_enabled
+from ednna.governance.feature_flags import approval_api_enabled
+from ednna.orchestration.multiagent_feature_flags import multiagent_query_api_enabled
+
+
+app.register_blueprint(create_orchestration_blueprint())
+app.register_blueprint(create_eddy_query_blueprint())
+
+if approval_api_enabled():
+    from ednna.api.approvals import create_approval_blueprint
+    from ednna.governance.mysql_stores import MySQLApprovalStore
+    from ednna.identity.bootstrap import build_oidc_authenticator
+    from ednna.settings import DatabaseSettings
+
+    app.register_blueprint(
+        create_approval_blueprint(
+            build_oidc_authenticator(),
+            MySQLApprovalStore(DatabaseSettings.from_env()),
+        )
+    )
+
+
+if action_api_enabled():
+    from ednna.api.actions import create_action_blueprint
+    from ednna.bootstrap import build_eddy_gateway
+    from ednna.governance.mysql_stores import MySQLApprovalStore, MySQLIdempotencyStore
+    from ednna.identity.bootstrap import build_oidc_authenticator
+    from ednna.settings import DatabaseSettings
+
+    action_db = DatabaseSettings.from_env()
+    app.register_blueprint(
+        create_action_blueprint(
+            build_oidc_authenticator(),
+            build_eddy_gateway(),
+            MySQLApprovalStore(action_db),
+            MySQLIdempotencyStore(action_db),
+        )
+    )
+
+
+if multiagent_query_api_enabled():
+    from ednna.api.multiagent import create_multiagent_query_blueprint
+    from ednna.bootstrap import build_multiagent_components
+    from ednna.identity.bootstrap import build_oidc_authenticator
+
+    multiagent_registry, multiagent_gateway = build_multiagent_components()
+    app.register_blueprint(
+        create_multiagent_query_blueprint(
+            build_oidc_authenticator(),
+            multiagent_registry,
+            multiagent_gateway,
+        )
+    )

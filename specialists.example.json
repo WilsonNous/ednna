@@ -1,0 +1,22 @@
+{
+  "specialists": [
+    {
+      "specialist_id": "finance",
+      "name": "Finance",
+      "domain": "finance",
+      "description": "Especialista financeiro da Netunna.",
+      "capabilities": [
+        {
+          "name": "finance.exposure.get",
+          "kind": "query",
+          "description": "Consultar exposição financeira de clientes."
+        }
+      ],
+      "transport": {
+        "base_url_env": "FINANCE_BASE_URL",
+        "api_token_env": "FINANCE_API_TOKEN",
+        "timeout_env": "FINANCE_TIMEOUT_SECONDS"
+      }
+    }
+  ]
+}

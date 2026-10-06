@@ -1,12 +1,10 @@
-# config.py
-import os
+"""Compatibility configuration for the legacy Flask application.
 
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),  # Default local
-    "user": os.getenv("DB_USER", "noust785_edi_admin"),
-    "password": os.getenv("DB_PASSWORD", "N3tunn@21#"),
-    "database": os.getenv("DB_NAME", "noust785_edi_ops"),
-    "port": int(os.getenv("DB_PORT", 3306)),
-    "charset": "utf8mb4",
-    "collation": "utf8mb4_unicode_ci"
-}
+New EDNNA code should import from ednna.settings directly.
+"""
+
+from ednna.infrastructure.database import build_mysql_config
+from ednna.settings import DatabaseSettings
+
+
+DB_CONFIG = build_mysql_config(DatabaseSettings.from_env())
