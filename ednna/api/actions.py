@@ -4,6 +4,10 @@ from flask import Blueprint, g, jsonify, request
 
 from ednna.governance.action_control import ActionAuthorization, ActionAuthorizer
 from ednna.governance.approvals import ApprovalStatus, ApprovalStore
+from ednna.governance.action_execution import (
+    ActionExecutionMode,
+    action_execution_mode,
+)
 from ednna.governance.idempotency import DuplicateActionError, IdempotencyStore
 from ednna.governance.policies import CapabilityPolicy, GovernancePolicyRegistry
 from ednna.identity.authorization import AuthorizationDeniedError, AuthorizationService
@@ -70,6 +74,35 @@ def create_action_blueprint(
         ):
             return jsonify({"error": "valid approved decision is required"}), 403
 
+        action_authorization = ActionAuthorization(
+            capability=capability,
+            idempotency_key=idempotency_key,
+            approval_id=approval_id,
+        )
+
+        if action_execution_mode() is ActionExecutionMode.DRY_RUN:
+            try:
+                authorizer.authorize(action_authorization)
+            except Exception:
+                return jsonify({"error": "controlled action validation failed"}), 403
+
+            return jsonify(
+                {
+                    "specialist_id": approval.specialist_id,
+                    "capability": capability,
+                    "status": "dry_run",
+                    "output": {
+                        "validated": True,
+                        "executed": False,
+                    },
+                    "confidence": None,
+                    "evidence": [],
+                    "warnings": [],
+                    "requires_human": False,
+                    "trace_id": approval.trace_id,
+                }
+            )
+
         action_request = IntelligenceRequest(
             capability=capability,
             input=action_input,
@@ -81,11 +114,7 @@ def create_action_blueprint(
         try:
             response = controlled.execute(
                 action_request,
-                ActionAuthorization(
-                    capability=capability,
-                    idempotency_key=idempotency_key,
-                    approval_id=approval_id,
-                ),
+                action_authorization,
             )
         except DuplicateActionError:
             return jsonify({"error": "duplicate action blocked"}), 409
