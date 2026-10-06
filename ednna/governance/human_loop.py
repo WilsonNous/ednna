@@ -25,6 +25,8 @@ class HumanDecisionService:
         self,
         response: IntelligenceResponse,
         reason: str | None = None,
+        tenant_id: str | None = None,
+        requested_by: str | None = None,
     ) -> ApprovalRequest | None:
         if not response.requires_human:
             return None
@@ -36,6 +38,8 @@ class HumanDecisionService:
             capability=response.capability,
             specialist_id=response.specialist_id,
             reason=reason or self._default_reason(response),
+            tenant_id=tenant_id,
+            requested_by=requested_by,
         )
         self._store.save(approval)
         return approval
