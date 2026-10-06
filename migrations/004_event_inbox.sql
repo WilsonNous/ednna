@@ -12,3 +12,6 @@ CREATE TABLE IF NOT EXISTS orchestration_event_inbox (
     INDEX idx_event_inbox_tenant_type (tenant_id, event_type),
     INDEX idx_event_inbox_received (received_at)
 );
+
+INSERT IGNORE INTO orchestration_schema_migrations (version, filename)
+VALUES ('004', '004_event_inbox.sql');
