@@ -2,7 +2,7 @@
 """
 Ednna Chatbot - Netunna Software
 Backend Flask com MySQL — Inteligência Contextual + Aprendizado Ativo
-Deploy seguro no Render via GitHub
+Deploy no Azure App Service via GitHub Actions
 """
 
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
