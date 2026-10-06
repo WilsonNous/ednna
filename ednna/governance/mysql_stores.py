@@ -22,9 +22,9 @@ class MySQLApprovalStore:
             cursor.execute(
                 """
                 INSERT INTO orchestration_approvals (
-                    approval_id, trace_id, capability, specialist_id, reason, status,
-                    requested_at, decided_at, decided_by, decision_note
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    approval_id, trace_id, capability, specialist_id, tenant_id, requested_by,
+                    reason, status, requested_at, decided_at, decided_by, decision_note
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     status = VALUES(status),
                     decided_at = VALUES(decided_at),
@@ -36,6 +36,8 @@ class MySQLApprovalStore:
                     approval.trace_id,
                     approval.capability,
                     approval.specialist_id,
+                    approval.tenant_id,
+                    approval.requested_by,
                     approval.reason,
                     approval.status.value,
                     approval.requested_at.replace(tzinfo=None),
@@ -68,6 +70,8 @@ class MySQLApprovalStore:
                 capability=row["capability"],
                 specialist_id=row["specialist_id"],
                 reason=row["reason"],
+                tenant_id=row.get("tenant_id"),
+                requested_by=row.get("requested_by"),
                 status=ApprovalStatus(row["status"]),
                 requested_at=row["requested_at"],
                 decided_at=row["decided_at"],
