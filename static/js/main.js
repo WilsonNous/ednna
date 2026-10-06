@@ -1,6 +1,29 @@
+async function loadRuntimeStatus() {
+    const target = document.getElementById('runtimeStatus');
+    if (!target) return;
+
+    try {
+        const response = await fetch('/api/runtime');
+        if (!response.ok) throw new Error('runtime unavailable');
+
+        const runtime = await response.json();
+        const chatMode = runtime.chat_mode === 'orchestrated'
+            ? 'orquestração ativa'
+            : 'compatibilidade legada';
+        const eddy = runtime.features && runtime.features.eddy
+            ? ' • EDDY conectado'
+            : '';
+
+        target.textContent = `${runtime.platform} • ${chatMode}${eddy}`;
+    } catch (error) {
+        target.textContent = 'EDNNA 2.0 • status indisponível';
+    }
+}
+
 let userName = null;
 
 window.addEventListener('load', () => {
+    loadRuntimeStatus();
     const savedName = localStorage.getItem('savedUserName');
     if (savedName) {
         userName = savedName;
