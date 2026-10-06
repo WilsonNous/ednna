@@ -59,3 +59,26 @@ class ActionAuthorizer:
             raise HumanApprovalRequiredError(
                 "Approval capability does not match requested action"
             )
+
+        if (
+            approval.action_idempotency_key is not None
+            and approval.action_idempotency_key != authorization.idempotency_key
+        ):
+            raise HumanApprovalRequiredError(
+                "Approval is already bound to another action"
+            )
+
+    def bind(self, authorization: ActionAuthorization) -> None:
+        policy = self._policies.get(authorization.capability)
+        if policy.allow_autonomous_action:
+            return
+
+        if policy.requires_human_approval:
+            if not authorization.approval_id:
+                raise HumanApprovalRequiredError(
+                    "Human approval is required before action binding"
+                )
+            self._approvals.bind_action(
+                authorization.approval_id,
+                authorization.idempotency_key,
+            )
