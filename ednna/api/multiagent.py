@@ -13,17 +13,19 @@ from ednna.orchestration.registry import SpecialistRegistry
 from ednna.orchestration.presentation import ExecutivePresenter
 from ednna.orchestration.service import OrchestrationService
 from ednna.orchestration.synthesis import DeterministicSynthesizer
+from ednna.specialists.availability import SpecialistAvailabilityRegistry
 
 
 def create_multiagent_query_blueprint(
     authenticator: OIDCAuthenticator,
     registry: SpecialistRegistry,
     gateway: IntelligenceGateway,
+    availability: SpecialistAvailabilityRegistry | None = None,
 ) -> Blueprint:
     blueprint = Blueprint("multiagent_query_api", __name__, url_prefix="/api/orchestration")
     authenticated = require_auth(authenticator)
     authorization = AuthorizationService()
-    planner = Planner(CapabilityDiscovery(registry))
+    planner = Planner(CapabilityDiscovery(registry, availability=availability))
     executor = PlanExecutor(planner, OrchestrationService(gateway))
     synthesizer = DeterministicSynthesizer()
     presenter = ExecutivePresenter()
