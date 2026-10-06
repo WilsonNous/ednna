@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netunna.local/contracts/intelligence-v1.schema.json",
+  "title": "Netunna Intelligence Contract v1",
+  "type": "object",
+  "$defs": {
+    "IntelligenceRequest": {
+      "type": "object",
+      "required": ["contract_version", "capability", "input"],
+      "properties": {
+        "contract_version": {"const": "1"},
+        "capability": {"type": "string", "minLength": 1},
+        "input": {"type": "object"},
+        "user_id": {"type": ["string", "null"]},
+        "tenant_id": {"type": ["string", "null"]},
+        "conversation_id": {"type": ["string", "null"]},
+        "trace_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "IntelligenceResponse": {
+      "type": "object",
+      "required": [
+        "contract_version",
+        "specialist_id",
+        "capability",
+        "status",
+        "output"
+      ],
+      "properties": {
+        "contract_version": {"const": "1"},
+        "specialist_id": {"type": "string", "minLength": 1},
+        "capability": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "output": {"type": "object"},
+        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "evidence": {
+          "type": "array",
+          "items": {"type": "object"}
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "requires_human": {"type": "boolean"},
+        "trace_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "IntelligenceEvent": {
+      "type": "object",
+      "required": [
+        "event_id",
+        "event_type",
+        "source",
+        "trace_id",
+        "occurred_at",
+        "data"
+      ],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "event_type": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "trace_id": {"type": "string", "minLength": 1},
+        "tenant_id": {"type": ["string", "null"]},
+        "subject": {"type": ["string", "null"]},
+        "occurred_at": {"type": "string", "format": "date-time"},
+        "data": {"type": "object"}
+      },
+      "additionalProperties": false
+    }
+  }
+}
