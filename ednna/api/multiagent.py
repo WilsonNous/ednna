@@ -10,6 +10,7 @@ from ednna.orchestration.executor import ExecutionContext, PlanExecutor
 from ednna.orchestration.gateway import IntelligenceGateway
 from ednna.orchestration.planner import Planner
 from ednna.orchestration.registry import SpecialistRegistry
+from ednna.orchestration.presentation import ExecutivePresenter
 from ednna.orchestration.service import OrchestrationService
 from ednna.orchestration.synthesis import DeterministicSynthesizer
 
@@ -25,6 +26,7 @@ def create_multiagent_query_blueprint(
     planner = Planner(CapabilityDiscovery(registry))
     executor = PlanExecutor(planner, OrchestrationService(gateway))
     synthesizer = DeterministicSynthesizer()
+    presenter = ExecutivePresenter()
 
     @blueprint.post("/query")
     @authenticated
@@ -61,9 +63,18 @@ def create_multiagent_query_blueprint(
             return jsonify({"error": "multiagent query failed"}), 502
 
         synthesis = synthesizer.synthesize(execution)
+        executive = presenter.present(synthesis)
         return jsonify(
             {
                 "trace_id": synthesis.trace_id,
+                "summary": executive.summary,
+                "sections": [
+                    {
+                        "title": section.title,
+                        "items": list(section.items),
+                    }
+                    for section in executive.sections
+                ],
                 "plan": [
                     {
                         "specialist_id": step.specialist_id,
