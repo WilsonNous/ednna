@@ -34,6 +34,11 @@
       "version": "006",
       "filename": "006_approval_action_binding.sql",
       "description": "Bind approved decisions to a single idempotent action."
+    },
+    {
+      "version": "007",
+      "filename": "007_action_execution_ledger.sql",
+      "description": "Track controlled action execution outcomes and uncertainty."
     }
   ]
 }
