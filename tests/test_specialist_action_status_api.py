@@ -99,6 +99,9 @@ def test_specialist_status_lookup_never_replays_action():
     assert payload["state"] == "succeeded"
     assert payload["ledger_status"] == "uncertain"
     assert payload["reference"] == "eddy:receipt-1"
+    assert payload["proposal"]["kind"] == "confirm_succeeded"
+    assert payload["proposal"]["automatic"] is False
+    assert payload["proposal"]["reason_code"] == "specialist_reports_succeeded"
     assert specialist.status_calls == 1
     assert specialist.action_calls == 0
 
