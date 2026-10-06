@@ -6,15 +6,46 @@
   "$defs": {
     "IntelligenceRequest": {
       "type": "object",
-      "required": ["contract_version", "capability", "input"],
+      "required": [
+        "contract_version",
+        "capability",
+        "input"
+      ],
       "properties": {
-        "contract_version": {"const": "1"},
-        "capability": {"type": "string", "minLength": 1},
-        "input": {"type": "object"},
-        "user_id": {"type": ["string", "null"]},
-        "tenant_id": {"type": ["string", "null"]},
-        "conversation_id": {"type": ["string", "null"]},
-        "trace_id": {"type": ["string", "null"]}
+        "contract_version": {
+          "const": "1"
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input": {
+          "type": "object"
+        },
+        "user_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tenant_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conversation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "trace_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       },
       "additionalProperties": false
     },
@@ -28,22 +59,53 @@
         "output"
       ],
       "properties": {
-        "contract_version": {"const": "1"},
-        "specialist_id": {"type": "string", "minLength": 1},
-        "capability": {"type": "string", "minLength": 1},
-        "status": {"type": "string", "minLength": 1},
-        "output": {"type": "object"},
-        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "contract_version": {
+          "const": "1"
+        },
+        "specialist_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "output": {
+          "type": "object"
+        },
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
         "evidence": {
           "type": "array",
-          "items": {"type": "object"}
+          "items": {
+            "type": "object"
+          }
         },
         "warnings": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
-        "requires_human": {"type": "boolean"},
-        "trace_id": {"type": ["string", "null"]}
+        "requires_human": {
+          "type": "boolean"
+        },
+        "trace_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       },
       "additionalProperties": false
     },
@@ -58,14 +120,75 @@
         "data"
       ],
       "properties": {
-        "event_id": {"type": "string", "minLength": 1},
-        "event_type": {"type": "string", "minLength": 1},
-        "source": {"type": "string", "minLength": 1},
-        "trace_id": {"type": "string", "minLength": 1},
-        "tenant_id": {"type": ["string", "null"]},
-        "subject": {"type": ["string", "null"]},
-        "occurred_at": {"type": "string", "format": "date-time"},
-        "data": {"type": "object"}
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trace_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tenant_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SpecialistHandshake": {
+      "type": "object",
+      "required": [
+        "specialist_id",
+        "contract_version",
+        "capabilities",
+        "status"
+      ],
+      "properties": {
+        "specialist_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contract_version": {
+          "const": "1"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "degraded",
+            "unavailable"
+          ]
+        }
       },
       "additionalProperties": false
     }
