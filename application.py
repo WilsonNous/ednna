@@ -59,16 +59,19 @@ if multiagent_query_api_enabled():
 
 if event_ingress_api_enabled():
     from ednna.api.events import create_event_ingress_blueprint
+    from ednna.events.bootstrap import build_event_router
     from ednna.events.mysql_store import MySQLEventStore
-    from ednna.events.router import EventRouter
     from ednna.events.service import EventService
+    from ednna.governance.mysql_stores import MySQLApprovalStore
     from ednna.identity.bootstrap import build_oidc_authenticator
     from ednna.settings import DatabaseSettings
 
-    event_store = MySQLEventStore(DatabaseSettings.from_env())
+    event_db = DatabaseSettings.from_env()
+    event_store = MySQLEventStore(event_db)
+    approval_store = MySQLApprovalStore(event_db)
     app.register_blueprint(
         create_event_ingress_blueprint(
             build_oidc_authenticator(),
-            EventService(event_store, EventRouter()),
+            EventService(event_store, build_event_router(approval_store)),
         )
     )
