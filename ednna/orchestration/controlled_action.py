@@ -38,5 +38,6 @@ class ControlledActionService:
             )
 
         self._authorizer.authorize(authorization)
+        self._authorizer.bind(authorization)
         self._idempotency.reserve(authorization.idempotency_key)
         return self._gateway.dispatch(traced, OperationKind.ACTION)
