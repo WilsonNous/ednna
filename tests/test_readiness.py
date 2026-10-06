@@ -46,3 +46,24 @@ def test_servicebus_consumer_requires_subscription(monkeypatch):
     servicebus = next(check for check in report.checks if check.component == "servicebus")
     assert servicebus.ready is False
     assert servicebus.reason == "missing:SERVICEBUS_SUBSCRIPTION"
+
+
+def test_specialist_health_worker_requires_durable_availability(monkeypatch):
+    set_base(monkeypatch)
+    monkeypatch.setenv("SPECIALIST_HEALTH_WORKER_ENABLED", "true")
+    monkeypatch.setenv("SPECIALIST_AVAILABILITY_DURABLE", "false")
+    monkeypatch.setenv("DB_HOST", "db")
+    monkeypatch.setenv("DB_USER", "user")
+    monkeypatch.setenv("DB_PASSWORD", "password")
+    monkeypatch.setenv("DB_NAME", "ednna")
+
+    report = ReadinessChecker().check()
+
+    worker = next(
+        check
+        for check in report.checks
+        if check.component == "specialist_health_worker"
+    )
+    assert worker.ready is False
+    assert worker.reason == "durable_availability_required"
+    assert report.ready is False
