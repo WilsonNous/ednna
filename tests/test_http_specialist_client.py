@@ -1,13 +1,19 @@
 from ednna.orchestration.contracts import IntelligenceRequest
 from ednna.specialists.http_client import HttpSpecialistClient, SpecialistTransportError
+from ednna.specialists.protocol import (
+    CONTRACT_VERSION,
+    CONTRACT_VERSION_HEADER,
+    UnsupportedContractVersionError,
+)
 
 import pytest
 
 
 class FakeResponse:
-    def __init__(self, payload=None, error=None):
+    def __init__(self, payload=None, error=None, headers=None):
         self._payload = payload or {}
         self._error = error
+        self.headers = headers or {}
 
     def raise_for_status(self):
         if self._error:
@@ -34,10 +40,11 @@ class FakeSession:
         return self.response
 
 
-def test_query_uses_structured_contract_and_trace_header():
+def test_query_uses_structured_versioned_contract_and_trace_header():
     session = FakeSession(
         FakeResponse(
             {
+                "contract_version": CONTRACT_VERSION,
                 "specialist_id": "eddy",
                 "capability": "edi.status.get",
                 "status": "success",
@@ -45,7 +52,8 @@ def test_query_uses_structured_contract_and_trace_header():
                 "confidence": 0.99,
                 "evidence": [{"type": "operation", "id": "1"}],
                 "trace_id": "trace-123",
-            }
+            },
+            headers={CONTRACT_VERSION_HEADER: CONTRACT_VERSION},
         )
     )
     client = HttpSpecialistClient(
@@ -70,9 +78,34 @@ def test_query_uses_structured_contract_and_trace_header():
     assert call["url"] == "https://eddy.internal/api/intelligence/query"
     assert call["headers"]["Authorization"] == "Bearer token"
     assert call["headers"]["X-Trace-Id"] == "trace-123"
+    assert call["headers"][CONTRACT_VERSION_HEADER] == CONTRACT_VERSION
+    assert call["json"]["contract_version"] == CONTRACT_VERSION
     assert call["timeout"] == 5
     assert response.output == {"healthy": True}
     assert response.confidence == 0.99
+
+
+def test_explicit_incompatible_specialist_contract_version_is_rejected():
+    session = FakeSession(
+        FakeResponse(
+            {
+                "contract_version": "2",
+                "specialist_id": "eddy",
+                "capability": "edi.status.get",
+                "status": "success",
+                "output": {},
+            }
+        )
+    )
+    client = HttpSpecialistClient(
+        specialist_id="eddy",
+        base_url="https://eddy.internal",
+        api_token="token",
+        session=session,
+    )
+
+    with pytest.raises(UnsupportedContractVersionError):
+        client.query(IntelligenceRequest(capability="edi.status.get", input={}))
 
 
 def test_transport_error_does_not_expose_secret():
