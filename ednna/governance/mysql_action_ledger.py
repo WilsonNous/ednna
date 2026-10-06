@@ -9,6 +9,7 @@ from ednna.settings import DatabaseSettings
 
 from .action_ledger import (
     ActionExecutionNotFoundError,
+    ActionExecutionNotReconcilableError,
     ActionExecutionRecord,
     ActionExecutionStatus,
     DuplicateActionExecutionError,
@@ -124,6 +125,58 @@ class MySQLActionExecutionLedger:
         )
         return self._get_required(idempotency_key)
 
+    def reconcile(
+        self,
+        idempotency_key: str,
+        status: ActionExecutionStatus,
+        reconciled_by: str,
+        note: str,
+        reference: str,
+    ) -> ActionExecutionRecord:
+        allowed = {
+            ActionExecutionStatus.RECONCILED_SUCCEEDED,
+            ActionExecutionStatus.RECONCILED_NOT_EXECUTED,
+        }
+        if status not in allowed:
+            raise ActionExecutionNotReconcilableError(idempotency_key)
+
+        connection = connect_mysql(self._settings)
+        if connection is None:
+            raise RuntimeError("Action ledger database is unavailable")
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                """
+                UPDATE orchestration_action_executions
+                SET status = %s,
+                    reconciled_at = CURRENT_TIMESTAMP(6),
+                    reconciled_by = %s,
+                    reconciliation_note = %s,
+                    reconciliation_reference = %s
+                WHERE idempotency_key = %s
+                  AND status = 'uncertain'
+                """,
+                (
+                    status.value,
+                    reconciled_by,
+                    note,
+                    reference,
+                    idempotency_key,
+                ),
+            )
+            if cursor.rowcount == 0:
+                connection.rollback()
+                current = self.get(idempotency_key)
+                if current is None:
+                    raise ActionExecutionNotFoundError(idempotency_key)
+                raise ActionExecutionNotReconcilableError(idempotency_key)
+            connection.commit()
+        finally:
+            cursor.close()
+            connection.close()
+
+        return self._get_required(idempotency_key)
+
     def _update(self, idempotency_key: str, sql: str, params: tuple) -> None:
         connection = connect_mysql(self._settings)
         if connection is None:
@@ -154,6 +207,10 @@ class MySQLActionExecutionLedger:
         if completed_at is not None and completed_at.tzinfo is None:
             completed_at = completed_at.replace(tzinfo=timezone.utc)
 
+        reconciled_at = row.get("reconciled_at")
+        if reconciled_at is not None and reconciled_at.tzinfo is None:
+            reconciled_at = reconciled_at.replace(tzinfo=timezone.utc)
+
         return ActionExecutionRecord(
             idempotency_key=row["idempotency_key"],
             trace_id=row["trace_id"],
@@ -167,4 +224,8 @@ class MySQLActionExecutionLedger:
             response_status=row["response_status"],
             evidence_count=row["evidence_count"],
             error_type=row["error_type"],
+            reconciled_at=reconciled_at,
+            reconciled_by=row.get("reconciled_by"),
+            reconciliation_note=row.get("reconciliation_note"),
+            reconciliation_reference=row.get("reconciliation_reference"),
         )
