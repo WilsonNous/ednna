@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ednna.specialists.availability import SpecialistAvailabilityRegistry
+from ednna.specialists.availability import SpecialistAvailabilityStore
 
 from .contracts import IntelligenceRequest, IntelligenceResponse, OperationKind
 from .registry import SpecialistRegistry
@@ -33,7 +33,7 @@ class IntelligenceGateway:
     def __init__(
         self,
         registry: SpecialistRegistry,
-        availability: SpecialistAvailabilityRegistry | None = None,
+        availability: SpecialistAvailabilityStore | None = None,
     ) -> None:
         self._registry = registry
         self._availability = availability
