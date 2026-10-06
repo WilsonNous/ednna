@@ -124,3 +124,76 @@ def test_controlled_service_rejects_capability_mismatch_before_dispatch():
                 idempotency_key="k1",
             ),
         )
+
+
+def test_approval_binding_is_idempotent_for_same_action_key():
+    authorizer, approvals = build_authorizer()
+    approval = new_approval_request(
+        trace_id="trace-bind-1",
+        capability="edi.operation.execute",
+        specialist_id="eddy",
+        reason="Approved",
+    )
+    approved = approval.__class__(
+        approval_id=approval.approval_id,
+        trace_id=approval.trace_id,
+        capability=approval.capability,
+        specialist_id=approval.specialist_id,
+        reason=approval.reason,
+        status=ApprovalStatus.APPROVED,
+        requested_at=approval.requested_at,
+    )
+    approvals.save(approved)
+
+    authorization = ActionAuthorization(
+        capability="edi.operation.execute",
+        idempotency_key="action-key-1",
+        approval_id=approval.approval_id,
+    )
+
+    authorizer.authorize(authorization)
+    authorizer.bind(authorization)
+    authorizer.authorize(authorization)
+    authorizer.bind(authorization)
+
+    bound = approvals.get(approval.approval_id)
+    assert bound is not None
+    assert bound.action_idempotency_key == "action-key-1"
+    assert bound.action_bound_at is not None
+
+
+def test_approval_cannot_be_reused_for_different_action_key():
+    authorizer, approvals = build_authorizer()
+    approval = new_approval_request(
+        trace_id="trace-bind-2",
+        capability="edi.operation.execute",
+        specialist_id="eddy",
+        reason="Approved",
+    )
+    approved = approval.__class__(
+        approval_id=approval.approval_id,
+        trace_id=approval.trace_id,
+        capability=approval.capability,
+        specialist_id=approval.specialist_id,
+        reason=approval.reason,
+        status=ApprovalStatus.APPROVED,
+        requested_at=approval.requested_at,
+    )
+    approvals.save(approved)
+
+    first = ActionAuthorization(
+        capability="edi.operation.execute",
+        idempotency_key="action-key-1",
+        approval_id=approval.approval_id,
+    )
+    authorizer.authorize(first)
+    authorizer.bind(first)
+
+    with pytest.raises(HumanApprovalRequiredError):
+        authorizer.authorize(
+            ActionAuthorization(
+                capability="edi.operation.execute",
+                idempotency_key="action-key-2",
+                approval_id=approval.approval_id,
+            )
+        )
