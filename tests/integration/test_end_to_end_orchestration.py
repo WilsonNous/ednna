@@ -178,3 +178,54 @@ def test_same_action_cannot_execute_twice_with_same_idempotency_key():
 
     assert raised is True
     assert len(client.actions) == 1
+
+
+def test_approved_decision_cannot_authorize_second_action_key():
+    _, client, _, approvals, controlled = build_stack()
+    approval = ApprovalRequest(
+        approval_id="approval-3",
+        trace_id="trace-e2e-3",
+        capability="edi.operation.execute",
+        specialist_id="eddy",
+        reason="Approved",
+        tenant_id="tenant-1",
+        requested_by="operator-1",
+        status=ApprovalStatus.APPROVED,
+        requested_at=datetime.now(timezone.utc),
+        decided_at=datetime.now(timezone.utc),
+        decided_by="reviewer-1",
+    )
+    approvals.save(approval)
+
+    request = IntelligenceRequest(
+        capability="edi.operation.execute",
+        input={"issue_id": 789},
+        user_id="operator-1",
+        tenant_id="tenant-1",
+        trace_id="trace-e2e-3",
+    )
+
+    controlled.execute(
+        request,
+        ActionAuthorization(
+            capability="edi.operation.execute",
+            idempotency_key="issue-789-execute-v1",
+            approval_id=approval.approval_id,
+        ),
+    )
+
+    try:
+        controlled.execute(
+            request,
+            ActionAuthorization(
+                capability="edi.operation.execute",
+                idempotency_key="issue-789-execute-v2",
+                approval_id=approval.approval_id,
+            ),
+        )
+        raised = False
+    except Exception:
+        raised = True
+
+    assert raised is True
+    assert len(client.actions) == 1
