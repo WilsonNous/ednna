@@ -1,6 +1,7 @@
 from app import app
 from ednna.api.eddy_query import create_eddy_query_blueprint
 from ednna.api.orchestration import create_orchestration_blueprint
+from ednna.governance.action_feature_flags import action_api_enabled
 from ednna.governance.feature_flags import approval_api_enabled
 
 
@@ -17,5 +18,23 @@ if approval_api_enabled():
         create_approval_blueprint(
             build_oidc_authenticator(),
             MySQLApprovalStore(DatabaseSettings.from_env()),
+        )
+    )
+
+
+if action_api_enabled():
+    from ednna.api.actions import create_action_blueprint
+    from ednna.bootstrap import build_eddy_gateway
+    from ednna.governance.mysql_stores import MySQLApprovalStore, MySQLIdempotencyStore
+    from ednna.identity.bootstrap import build_oidc_authenticator
+    from ednna.settings import DatabaseSettings
+
+    action_db = DatabaseSettings.from_env()
+    app.register_blueprint(
+        create_action_blueprint(
+            build_oidc_authenticator(),
+            build_eddy_gateway(),
+            MySQLApprovalStore(action_db),
+            MySQLIdempotencyStore(action_db),
         )
     )
