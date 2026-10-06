@@ -39,6 +39,11 @@
       "version": "007",
       "filename": "007_action_execution_ledger.sql",
       "description": "Track controlled action execution outcomes and uncertainty."
+    },
+    {
+      "version": "008",
+      "filename": "008_action_reconciliation.sql",
+      "description": "Record manual resolution of uncertain action executions."
     }
   ]
 }
