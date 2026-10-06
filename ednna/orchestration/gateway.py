@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from ednna.specialists.action_status import SpecialistActionStatus
 from ednna.specialists.availability import SpecialistAvailabilityStore
 
 from .contracts import IntelligenceRequest, IntelligenceResponse, OperationKind
@@ -16,6 +17,13 @@ class SpecialistClient(Protocol):
         ...
 
     def action(self, request: IntelligenceRequest) -> IntelligenceResponse:
+        ...
+
+    def action_status(
+        self,
+        idempotency_key: str,
+        trace_id: str | None = None,
+    ) -> SpecialistActionStatus:
         ...
 
 
@@ -80,3 +88,28 @@ class IntelligenceGateway:
         if operation is OperationKind.QUERY:
             return client.query(request)
         return client.action(request)
+
+
+    def lookup_action_status(
+        self,
+        capability: str,
+        idempotency_key: str,
+        trace_id: str | None = None,
+    ) -> SpecialistActionStatus:
+        specialist = self._registry.resolve(capability)
+
+        if (
+            self._availability is not None
+            and not self._availability.is_routable(specialist.specialist_id)
+        ):
+            raise SpecialistUnavailableError(
+                f"Specialist '{specialist.specialist_id}' is not routable"
+            )
+
+        client = self._clients.get(specialist.specialist_id)
+        if client is None:
+            raise SpecialistClientNotFoundError(
+                f"No client is configured for specialist '{specialist.specialist_id}'"
+            )
+
+        return client.action_status(idempotency_key, trace_id)
