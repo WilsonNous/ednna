@@ -10,6 +10,8 @@ class ActionExecutionStatus(str, Enum):
     STARTED = "started"
     SUCCEEDED = "succeeded"
     UNCERTAIN = "uncertain"
+    RECONCILED_SUCCEEDED = "reconciled_succeeded"
+    RECONCILED_NOT_EXECUTED = "reconciled_not_executed"
 
 
 class DuplicateActionExecutionError(RuntimeError):
@@ -17,6 +19,10 @@ class DuplicateActionExecutionError(RuntimeError):
 
 
 class ActionExecutionNotFoundError(LookupError):
+    pass
+
+
+class ActionExecutionNotReconcilableError(ValueError):
     pass
 
 
@@ -34,6 +40,10 @@ class ActionExecutionRecord:
     response_status: str | None = None
     evidence_count: int = 0
     error_type: str | None = None
+    reconciled_at: datetime | None = None
+    reconciled_by: str | None = None
+    reconciliation_note: str | None = None
+    reconciliation_reference: str | None = None
 
 
 class ActionExecutionLedger(Protocol):
@@ -63,6 +73,16 @@ class ActionExecutionLedger(Protocol):
         self,
         idempotency_key: str,
         error_type: str,
+    ) -> ActionExecutionRecord:
+        ...
+
+    def reconcile(
+        self,
+        idempotency_key: str,
+        status: ActionExecutionStatus,
+        reconciled_by: str,
+        note: str,
+        reference: str,
     ) -> ActionExecutionRecord:
         ...
 
@@ -127,6 +147,33 @@ class InMemoryActionExecutionLedger:
             status=ActionExecutionStatus.UNCERTAIN,
             completed_at=datetime.now(timezone.utc),
             error_type=error_type,
+        )
+        self._records[idempotency_key] = updated
+        return updated
+
+    def reconcile(
+        self,
+        idempotency_key: str,
+        status: ActionExecutionStatus,
+        reconciled_by: str,
+        note: str,
+        reference: str,
+    ) -> ActionExecutionRecord:
+        current = self._require(idempotency_key)
+        allowed = {
+            ActionExecutionStatus.RECONCILED_SUCCEEDED,
+            ActionExecutionStatus.RECONCILED_NOT_EXECUTED,
+        }
+        if current.status is not ActionExecutionStatus.UNCERTAIN or status not in allowed:
+            raise ActionExecutionNotReconcilableError(idempotency_key)
+
+        updated = replace(
+            current,
+            status=status,
+            reconciled_at=datetime.now(timezone.utc),
+            reconciled_by=reconciled_by,
+            reconciliation_note=note,
+            reconciliation_reference=reference,
         )
         self._records[idempotency_key] = updated
         return updated
