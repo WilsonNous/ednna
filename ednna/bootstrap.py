@@ -9,6 +9,7 @@ from .specialists.catalog import (
     register_catalog,
 )
 from .specialists.eddy import EDDY_DESCRIPTOR
+from .specialists.feature_flags import eddy_enabled
 
 
 def build_registry() -> SpecialistRegistry:
@@ -42,6 +43,11 @@ def build_catalog_gateway() -> IntelligenceGateway:
     register_catalog(registry, manifests)
 
     clients = build_manifest_clients(manifests)
+    if eddy_enabled():
+        from .specialists.eddy_client import build_eddy_client
+
+        clients["eddy"] = build_eddy_client()
+
     return build_gateway(clients=clients, registry=registry)
 
 
