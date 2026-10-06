@@ -31,8 +31,20 @@ class FakeSession:
     def post(self, url, json, headers, timeout):
         self.calls.append(
             {
+                "method": "POST",
                 "url": url,
                 "json": json,
+                "headers": headers,
+                "timeout": timeout,
+            }
+        )
+        return self.response
+
+    def get(self, url, headers, timeout):
+        self.calls.append(
+            {
+                "method": "GET",
+                "url": url,
                 "headers": headers,
                 "timeout": timeout,
             }
@@ -126,3 +138,37 @@ def test_transport_error_does_not_expose_secret():
         client.query(IntelligenceRequest(capability="edi.status.get", input={}))
 
     assert "super-secret-token" not in str(exc.value)
+
+
+def test_action_status_lookup_is_read_only_and_versioned():
+    session = FakeSession(
+        FakeResponse(
+            {
+                "contract_version": CONTRACT_VERSION,
+                "specialist_id": "eddy",
+                "state": "succeeded",
+                "trace_id": "trace-123",
+                "evidence": [{"type": "receipt", "id": "r-1"}],
+                "reference": "eddy:r-1",
+            },
+            headers={CONTRACT_VERSION_HEADER: CONTRACT_VERSION},
+        )
+    )
+    client = HttpSpecialistClient(
+        specialist_id="eddy",
+        base_url="https://eddy.internal",
+        api_token="token",
+        timeout_seconds=5,
+        session=session,
+    )
+
+    status = client.action_status("action-key-1", "trace-123")
+
+    call = session.calls[0]
+    assert call["method"] == "GET"
+    assert call["url"] == "https://eddy.internal/api/intelligence/actions/action-key-1"
+    assert call["headers"]["X-Trace-Id"] == "trace-123"
+    assert call["headers"][CONTRACT_VERSION_HEADER] == CONTRACT_VERSION
+    assert status.state.value == "succeeded"
+    assert status.reference == "eddy:r-1"
+    assert status.evidence[0]["id"] == "r-1"
