@@ -254,6 +254,14 @@ jobs:
       - name: Run release gate
         run: python -m ednna.operations.release_gate
 
+      - name: Configure composed application startup
+        run: |
+          az webapp config set \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name ednna \
+            --startup-file "gunicorn --bind=0.0.0.0 --timeout 600 application:app" \
+            --output none
+
       - name: Restart Azure App Service
         run: |
           az webapp restart \
@@ -271,7 +279,7 @@ jobs:
             --query defaultHostName -o tsv)"
 
           for attempt in $(seq 1 18); do
-            if curl --fail --silent --show-error \
+            if curl --fail --silent --show-error --max-time 10 \
               "https://$host/api/readiness" > readiness.json; then
               cat readiness.json
               exit 0
