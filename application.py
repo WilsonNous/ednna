@@ -46,15 +46,18 @@ if action_api_enabled():
 
 if multiagent_query_api_enabled():
     from ednna.api.multiagent import create_multiagent_query_blueprint
-    from ednna.bootstrap import build_multiagent_components
+    from ednna.bootstrap import build_multiagent_runtime
     from ednna.identity.bootstrap import build_oidc_authenticator
 
-    multiagent_registry, multiagent_gateway = build_multiagent_components()
+    multiagent_registry, multiagent_gateway, multiagent_availability = (
+        build_multiagent_runtime()
+    )
     app.register_blueprint(
         create_multiagent_query_blueprint(
             build_oidc_authenticator(),
             multiagent_registry,
             multiagent_gateway,
+            multiagent_availability,
         )
     )
 
