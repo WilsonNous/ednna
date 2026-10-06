@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from ednna.specialists.availability import SpecialistAvailabilityRegistry
+
 from .contracts import IntelligenceRequest, IntelligenceResponse, OperationKind
 from .registry import SpecialistRegistry
+from .router import SpecialistUnavailableError
 
 
 class SpecialistClient(Protocol):
@@ -27,8 +30,13 @@ class CapabilityKindMismatchError(ValueError):
 class IntelligenceGateway:
     """Dispatch structured requests without exposing specialist internals to EDNNA."""
 
-    def __init__(self, registry: SpecialistRegistry) -> None:
+    def __init__(
+        self,
+        registry: SpecialistRegistry,
+        availability: SpecialistAvailabilityRegistry | None = None,
+    ) -> None:
         self._registry = registry
+        self._availability = availability
         self._clients: dict[str, SpecialistClient] = {}
 
     def register_client(self, specialist_id: str, client: SpecialistClient) -> None:
@@ -44,6 +52,15 @@ class IntelligenceGateway:
         operation: OperationKind,
     ) -> IntelligenceResponse:
         specialist = self._registry.resolve(request.capability)
+
+        if (
+            self._availability is not None
+            and not self._availability.is_routable(specialist.specialist_id)
+        ):
+            raise SpecialistUnavailableError(
+                f"Specialist '{specialist.specialist_id}' is not routable"
+            )
+
         capability = next(
             item for item in specialist.capabilities if item.name == request.capability
         )
