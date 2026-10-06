@@ -111,16 +111,14 @@ class MySQLApprovalStore:
 
             if cursor.rowcount == 0:
                 cursor.execute(
-                    """
-                    SELECT approval_id, action_idempotency_key
-                    FROM orchestration_approvals
-                    WHERE approval_id = %s
-                    """,
+                    "SELECT * FROM orchestration_approvals WHERE approval_id = %s",
                     (approval_id,),
                 )
                 existing = cursor.fetchone()
                 if existing is None:
                     raise ApprovalNotFoundForBindingError(approval_id)
+                if existing.get("action_idempotency_key") == idempotency_key:
+                    return self._row_to_approval(existing)
                 raise ApprovalAlreadyBoundError(
                     "Approval is already bound to another action"
                 )
