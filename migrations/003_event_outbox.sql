@@ -15,3 +15,6 @@ CREATE TABLE IF NOT EXISTS orchestration_event_outbox (
     INDEX idx_outbox_status_available (delivery_status, available_at),
     INDEX idx_outbox_trace (trace_id)
 );
+
+INSERT IGNORE INTO orchestration_schema_migrations (version, filename)
+VALUES ('003', '003_event_outbox.sql');
