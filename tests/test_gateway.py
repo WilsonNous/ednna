@@ -68,3 +68,30 @@ def test_gateway_requires_registered_transport_client():
 
     with pytest.raises(SpecialistClientNotFoundError):
         gateway.dispatch(request, OperationKind.QUERY)
+
+
+def test_gateway_blocks_dispatch_when_specialist_becomes_unavailable():
+    import pytest
+
+    from ednna.orchestration.router import SpecialistUnavailableError
+    from ednna.specialists.availability import (
+        SpecialistAvailability,
+        SpecialistAvailabilityRegistry,
+    )
+
+    registry = SpecialistRegistry()
+    registry.register(EDDY_DESCRIPTOR)
+    availability = SpecialistAvailabilityRegistry()
+    availability.set("eddy", SpecialistAvailability.UNAVAILABLE)
+
+    gateway = IntelligenceGateway(registry, availability=availability)
+    gateway.register_client("eddy", FakeEddyClient())
+
+    with pytest.raises(SpecialistUnavailableError):
+        gateway.dispatch(
+            IntelligenceRequest(
+                capability="edi.status.get",
+                input={},
+            ),
+            OperationKind.QUERY,
+        )
