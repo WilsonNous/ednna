@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from .contracts import Capability, SpecialistDescriptor
 from .registry import SpecialistRegistry
-from ednna.specialists.availability import SpecialistAvailabilityRegistry
+from ednna.specialists.availability import SpecialistAvailabilityStore
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class CapabilityDiscovery:
     def __init__(
         self,
         registry: SpecialistRegistry,
-        availability: SpecialistAvailabilityRegistry | None = None,
+        availability: SpecialistAvailabilityStore | None = None,
     ) -> None:
         self._registry = registry
         self._availability = availability
