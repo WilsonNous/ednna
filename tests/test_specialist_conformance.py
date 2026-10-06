@@ -89,3 +89,32 @@ def test_manifest_rejects_duplicate_capability_and_invalid_env_name():
     codes = {issue.code for issue in report.issues}
     assert "duplicate_capability" in codes
     assert "invalid_transport_env" in codes
+
+
+def test_registry_rejects_non_conformant_manifest():
+    import pytest
+
+    from ednna.orchestration.registry import SpecialistRegistry
+    from ednna.specialists.catalog import (
+        SpecialistConformanceError,
+        register_catalog,
+    )
+
+    manifest = SpecialistManifest(
+        descriptor=SpecialistDescriptor(
+            specialist_id="Finance Agent",
+            name="Finance",
+            domain="finance",
+            description="Invalid id",
+            capabilities=(
+                Capability(
+                    name="finance.exposure.get",
+                    kind=OperationKind.QUERY,
+                    description="Consultar exposição.",
+                ),
+            ),
+        )
+    )
+
+    with pytest.raises(SpecialistConformanceError):
+        register_catalog(SpecialistRegistry(), (manifest,))
