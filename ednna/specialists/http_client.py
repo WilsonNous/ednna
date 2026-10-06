@@ -6,6 +6,7 @@ from typing import Any
 import requests
 
 from ednna.orchestration.contracts import IntelligenceRequest, IntelligenceResponse
+from ednna.specialists.action_status import SpecialistActionState, SpecialistActionStatus
 from ednna.specialists.handshake import SpecialistHandshake
 from ednna.specialists.protocol import (
     CONTRACT_VERSION,
@@ -70,6 +71,44 @@ class HttpSpecialistClient:
 
     def action(self, request: IntelligenceRequest) -> IntelligenceResponse:
         return self._post("/api/intelligence/action", request)
+
+    def action_status(
+        self,
+        idempotency_key: str,
+        trace_id: str | None = None,
+    ) -> SpecialistActionStatus:
+        headers = {
+            "Authorization": f"Bearer {self._api_token}",
+            CONTRACT_VERSION_HEADER: CONTRACT_VERSION,
+            "X-Trace-Id": trace_id or "",
+        }
+
+        try:
+            response = self._session.get(
+                f"{self._base_url}/api/intelligence/actions/{idempotency_key}",
+                headers=headers,
+                timeout=self._timeout_seconds,
+            )
+            response.raise_for_status()
+            body: dict[str, Any] = response.json()
+
+            response_headers = getattr(response, "headers", {}) or {}
+            validate_contract_version(response_headers.get(CONTRACT_VERSION_HEADER))
+            validate_contract_version(body.get("contract_version"))
+            state = SpecialistActionState(str(body.get("state", "unknown")))
+        except (requests.RequestException, ValueError) as exc:
+            raise SpecialistTransportError(
+                f"Specialist '{self._specialist_id}' action status lookup failed"
+            ) from exc
+
+        return SpecialistActionStatus(
+            specialist_id=str(body.get("specialist_id", self._specialist_id)),
+            idempotency_key=idempotency_key,
+            state=state,
+            trace_id=body.get("trace_id", trace_id),
+            evidence=tuple(body.get("evidence", [])),
+            reference=body.get("reference"),
+        )
 
     def _post(
         self,
