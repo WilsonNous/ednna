@@ -3,7 +3,11 @@ from __future__ import annotations
 from .orchestration.gateway import IntelligenceGateway, SpecialistClient
 from .orchestration.registry import SpecialistRegistry
 from .orchestration.router import IntelligenceRouter
-from .specialists.availability import SpecialistAvailabilityRegistry
+from .specialists.availability import (
+    SpecialistAvailabilityRegistry,
+    SpecialistAvailabilityStore,
+)
+from .specialists.availability_feature_flags import specialist_availability_durable
 from .specialists.availability_refresh import SpecialistAvailabilityRefresher
 from .specialists.catalog import (
     build_manifest_clients,
@@ -24,7 +28,7 @@ def build_registry() -> SpecialistRegistry:
 
 def build_router(
     registry: SpecialistRegistry | None = None,
-    availability: SpecialistAvailabilityRegistry | None = None,
+    availability: SpecialistAvailabilityStore | None = None,
 ) -> IntelligenceRouter:
     return IntelligenceRouter(
         registry or build_registry(),
@@ -35,7 +39,7 @@ def build_router(
 def build_gateway(
     clients: dict[str, SpecialistClient] | None = None,
     registry: SpecialistRegistry | None = None,
-    availability: SpecialistAvailabilityRegistry | None = None,
+    availability: SpecialistAvailabilityStore | None = None,
 ) -> IntelligenceGateway:
     active_registry = registry or build_registry()
     gateway = IntelligenceGateway(
@@ -100,10 +104,20 @@ def build_multiagent_components() -> tuple[SpecialistRegistry, IntelligenceGatew
     return registry, gateway
 
 
+def build_availability_store() -> SpecialistAvailabilityStore:
+    if specialist_availability_durable():
+        from .settings import DatabaseSettings
+        from .specialists.mysql_availability import MySQLSpecialistAvailabilityStore
+
+        return MySQLSpecialistAvailabilityStore(DatabaseSettings.from_env())
+
+    return SpecialistAvailabilityRegistry()
+
+
 def build_multiagent_runtime() -> tuple[
     SpecialistRegistry,
     IntelligenceGateway,
-    SpecialistAvailabilityRegistry | None,
+    SpecialistAvailabilityStore | None,
 ]:
     """Build a consistent multiagent runtime, optionally gated by handshake."""
     manifests = load_catalog_from_env()
@@ -119,7 +133,7 @@ def build_multiagent_runtime() -> tuple[
 
     availability = None
     if specialist_handshake_enforced():
-        availability = SpecialistAvailabilityRegistry()
+        availability = build_availability_store()
         SpecialistAvailabilityRefresher(
             registry,
             availability,
