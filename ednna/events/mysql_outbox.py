@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import timezone
 
 from ednna.infrastructure.database import connect_mysql
 from ednna.settings import DatabaseSettings
