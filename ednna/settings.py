@@ -54,3 +54,28 @@ class AppSettings:
             database=DatabaseSettings.from_env(),
             security=SecuritySettings.from_env(),
         )
+
+
+@dataclass(frozen=True)
+class OIDCAppSettings:
+    issuer: str
+    audience: str
+    jwks_url: str
+    tenant_claim: str = "tid"
+    user_claim: str = "oid"
+    service_claim: str = "azp"
+    roles_claim: str = "roles"
+    permissions_claim: str = "scp"
+
+    @classmethod
+    def from_env(cls) -> "OIDCAppSettings":
+        return cls(
+            issuer=require_env("OIDC_ISSUER"),
+            audience=require_env("OIDC_AUDIENCE"),
+            jwks_url=require_env("OIDC_JWKS_URL"),
+            tenant_claim=os.getenv("OIDC_TENANT_CLAIM", "tid"),
+            user_claim=os.getenv("OIDC_USER_CLAIM", "oid"),
+            service_claim=os.getenv("OIDC_SERVICE_CLAIM", "azp"),
+            roles_claim=os.getenv("OIDC_ROLES_CLAIM", "roles"),
+            permissions_claim=os.getenv("OIDC_PERMISSIONS_CLAIM", "scp"),
+        )
