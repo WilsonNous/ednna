@@ -18,7 +18,7 @@ class SpecialistHandshakeError(RuntimeError):
     pass
 
 
-def validate_handshake(
+def validate_handshake_compatibility(
     descriptor: SpecialistDescriptor,
     handshake: SpecialistHandshake,
 ) -> None:
@@ -38,6 +38,13 @@ def validate_handshake(
             "Remote specialist is missing declared capabilities: "
             + ",".join(missing)
         )
+
+
+def validate_handshake(
+    descriptor: SpecialistDescriptor,
+    handshake: SpecialistHandshake,
+) -> None:
+    validate_handshake_compatibility(descriptor, handshake)
 
     if handshake.status != "ready":
         raise SpecialistHandshakeError(
