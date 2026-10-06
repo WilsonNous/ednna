@@ -63,6 +63,7 @@ class ReadinessChecker:
                 "SERVICEBUS_OUTBOX_ENABLED",
                 "SERVICEBUS_CONSUMER_ENABLED",
                 "SPECIALIST_AVAILABILITY_DURABLE",
+                "SPECIALIST_HEALTH_WORKER_ENABLED",
             )
         )
         if not db_required:
