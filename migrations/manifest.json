@@ -29,6 +29,11 @@
       "version": "005",
       "filename": "005_specialist_availability.sql",
       "description": "Create durable specialist availability state."
+    },
+    {
+      "version": "006",
+      "filename": "006_approval_action_binding.sql",
+      "description": "Bind approved decisions to a single idempotent action."
     }
   ]
 }
