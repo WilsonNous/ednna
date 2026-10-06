@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from .contracts import Capability, SpecialistDescriptor
 from .registry import SpecialistRegistry
+from ednna.specialists.availability import SpecialistAvailabilityRegistry
 
 
 @dataclass(frozen=True)
@@ -18,8 +19,13 @@ class CapabilityMatch:
 class CapabilityDiscovery:
     """Deterministic capability discovery over registered specialist metadata."""
 
-    def __init__(self, registry: SpecialistRegistry) -> None:
+    def __init__(
+        self,
+        registry: SpecialistRegistry,
+        availability: SpecialistAvailabilityRegistry | None = None,
+    ) -> None:
         self._registry = registry
+        self._availability = availability
 
     def search(self, query: str, limit: int = 5) -> tuple[CapabilityMatch, ...]:
         query_tokens = self._tokens(query)
@@ -29,6 +35,12 @@ class CapabilityDiscovery:
             return ()
 
         for specialist in self._registry.list_specialists():
+            if (
+                self._availability is not None
+                and not self._availability.is_routable(specialist.specialist_id)
+            ):
+                continue
+
             for capability in specialist.capabilities:
                 score = self._score(query_tokens, specialist, capability)
                 if score > 0:
