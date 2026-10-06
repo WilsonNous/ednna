@@ -2,7 +2,7 @@
 """
 Ednna Chatbot - Netunna Software
 Backend Flask com MySQL — Inteligência Contextual + Aprendizado Ativo
-Deploy seguro no Render via GitHub
+Deploy no Azure App Service via GitHub Actions
 """
 
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
@@ -10,6 +10,10 @@ import mysql.connector
 from mysql.connector import Error
 import os
 from dotenv import load_dotenv
+
+from config import DB_CONFIG
+from ednna.chat.facade import try_orchestrated_chat
+from ednna.settings import require_env
 import logging
 import re
 from datetime import datetime
@@ -22,18 +26,13 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'netunna_secret_key_2025')
-
-# Configuração do banco de dados
-DB_CONFIG = {
-    "host": os.getenv('DB_HOST', 'localhost'),
-    "user": os.getenv('DB_USER', 'seu_usuario'),
-    "password": os.getenv('DB_PASSWORD', ''),
-    "database": os.getenv('DB_NAME', 'seu_banco'),
-    "port": int(os.getenv('DB_PORT', 3306)),
-    "charset": 'utf8mb4',
-    "collation": 'utf8mb4_unicode_ci'
-}
+app.secret_key = require_env("SECRET_KEY")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "true").lower()
+    in {"1", "true", "yes", "on"},
+)
 
 
 def get_db_connection():
@@ -84,6 +83,22 @@ def chat():
         if not user_message:
             return jsonify({'error': 'Mensagem vazia'}), 400
 
+        orchestrated = try_orchestrated_chat(
+            user_message,
+            user_id=str(user_id),
+            conversation_id=session.get("conversation_id"),
+        )
+        if orchestrated is not None:
+            return jsonify(
+                {
+                    "response": orchestrated.response,
+                    "intent": orchestrated.intent,
+                    "mode": orchestrated.mode,
+                    "trace_id": orchestrated.trace_id,
+                    "confidence": orchestrated.confidence,
+                }
+            )
+
         # Histórico de conversa
         if 'conversation_history' not in session:
             session['conversation_history'] = []
@@ -111,6 +126,8 @@ def chat():
 
 @app.route('/audit')
 def audit_page():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
     return render_template('audit.html')
 
 
@@ -346,18 +363,25 @@ def teach_ednna():
 @app.route('/api/audit', methods=['GET'])
 def audit():
     """Endpoint para auditoria de perguntas e respostas"""
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Acesso negado'}), 403
+
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
+        if connection is None:
+            return jsonify({'error': 'Banco indisponível'}), 503
         cursor = connection.cursor(dictionary=True)
 
         query = """
-            SELECT 
+            SELECT
                 u.message_text AS pergunta,
                 b.message_text AS resposta,
                 u.sent_at AS data
             FROM messages u
-            JOIN messages b 
-                ON b.conversation_id = u.conversation_id 
+            JOIN messages b
+                ON b.conversation_id = u.conversation_id
                 AND b.id > u.id
                 AND b.is_from_user = 0
             WHERE u.is_from_user = 1
@@ -365,14 +389,14 @@ def audit():
             LIMIT 500
         """
         cursor.execute(query)
-        results = cursor.fetchall()
-        return jsonify(results)
-    except Error as e:
-        logger.error(f"Erro ao gerar auditoria: {e}")
+        return jsonify(cursor.fetchall())
+    except Error:
+        logger.exception("Erro ao gerar auditoria")
         return jsonify({'error': 'Erro ao gerar auditoria'}), 500
     finally:
-        if connection and connection.is_connected():
+        if cursor is not None:
             cursor.close()
+        if connection and connection.is_connected():
             connection.close()
 
 
@@ -471,12 +495,21 @@ def get_ia_response(prompt):
 
 def ensure_user_exists(user_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
-    result = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    return result is not None
+    if conn is None:
+        return False
+
+    cursor = None
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        return cursor.fetchone() is not None
+    except Error:
+        logger.exception("Failed to validate user")
+        return False
+    finally:
+        if cursor is not None:
+            cursor.close()
+        conn.close()
 
 # === RESPOSTA INTELIGENTE COM CONTEXTO ===
 
@@ -570,19 +603,20 @@ def get_chat_response(message, user_id, last_user_question=None):
         # 🔍 Full-text como fallback
         if not result and len(norm.split()) > 1:
             try:
-                safe_norm = norm.replace("'", "\\'").replace('"', '\\"')
-                query_fulltext = f"""
+                query_fulltext = """
                     SELECT answer, category,
-                           MATCH(question, keywords, answer) AGAINST('{safe_norm}' IN NATURAL LANGUAGE MODE) as score
+                           MATCH(question, keywords, answer)
+                               AGAINST(%s IN NATURAL LANGUAGE MODE) as score
                     FROM knowledge_base
-                    WHERE MATCH(question, keywords, answer) AGAINST('{safe_norm}' IN NATURAL LANGUAGE MODE) > 0.7
+                    WHERE MATCH(question, keywords, answer)
+                               AGAINST(%s IN NATURAL LANGUAGE MODE) > 0.7
                     ORDER BY score DESC
                     LIMIT 1
                 """
-                cursor.execute(query_fulltext)
+                cursor.execute(query_fulltext, (norm, norm))
                 result = cursor.fetchone()
-            except Exception as e:
-                logger.error(f"Erro na busca full-text: {e}")
+            except Exception as exc:
+                logger.error("Erro na busca full-text: %s", exc)
 
         # Após todas as buscas
         if not result:

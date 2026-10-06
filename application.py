@@ -2,6 +2,7 @@ from app import app
 from ednna.api.eddy_query import create_eddy_query_blueprint
 from ednna.api.orchestration import create_orchestration_blueprint
 from ednna.api.readiness import create_readiness_blueprint
+from ednna.api.runtime import create_runtime_blueprint
 from ednna.governance.action_feature_flags import action_api_enabled
 from ednna.governance.feature_flags import approval_api_enabled
 from ednna.events.feature_flags import event_ingress_api_enabled
@@ -10,6 +11,7 @@ from ednna.orchestration.multiagent_feature_flags import multiagent_query_api_en
 
 app.register_blueprint(create_orchestration_blueprint())
 app.register_blueprint(create_readiness_blueprint())
+app.register_blueprint(create_runtime_blueprint())
 app.register_blueprint(create_eddy_query_blueprint())
 
 if approval_api_enabled():
