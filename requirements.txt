@@ -4,3 +4,5 @@ python-dotenv==1.0.1
 requests==2.31.0
 gunicorn==22.0.0
 PyJWT[crypto]==2.10.1
+azure-servicebus==7.14.3
+azure-identity==1.26.0
