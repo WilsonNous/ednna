@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 from .contracts import Capability, SpecialistDescriptor
@@ -44,11 +45,20 @@ class CapabilityDiscovery:
 
     @staticmethod
     def _tokens(text: str) -> set[str]:
-        return {
+        normalized = unicodedata.normalize("NFKD", text.lower())
+        ascii_text = "".join(char for char in normalized if not unicodedata.combining(char))
+        base_tokens = {
             token
-            for token in re.findall(r"[a-z0-9]+", text.lower())
+            for token in re.findall(r"[a-z0-9]+", ascii_text)
             if len(token) >= 3
         }
+
+        expanded = set(base_tokens)
+        for token in base_tokens:
+            if len(token) >= 6:
+                expanded.add(token[:6])
+
+        return expanded
 
     def _score(
         self,
