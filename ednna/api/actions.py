@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, g, jsonify, request
 
 from ednna.governance.action_control import ActionAuthorization, ActionAuthorizer
+from ednna.governance.action_ledger import ActionExecutionLedger
 from ednna.governance.approvals import (
     ApprovalAlreadyBoundError,
     ApprovalStatus,
@@ -39,12 +40,13 @@ def create_action_blueprint(
     gateway: IntelligenceGateway,
     approvals: ApprovalStore,
     idempotency: IdempotencyStore,
+    ledger: ActionExecutionLedger | None = None,
 ) -> Blueprint:
     blueprint = Blueprint("action_api", __name__, url_prefix="/api/actions")
     authorization = AuthorizationService()
     authenticated = require_auth(authenticator)
     authorizer = ActionAuthorizer(build_action_policies(), approvals)
-    controlled = ControlledActionService(gateway, authorizer, idempotency)
+    controlled = ControlledActionService(gateway, authorizer, idempotency, ledger)
 
     @blueprint.post("/edi/operation/execute")
     @authenticated
