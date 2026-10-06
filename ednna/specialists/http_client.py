@@ -6,6 +6,11 @@ from typing import Any
 import requests
 
 from ednna.orchestration.contracts import IntelligenceRequest, IntelligenceResponse
+from ednna.specialists.protocol import (
+    CONTRACT_VERSION,
+    CONTRACT_VERSION_HEADER,
+    validate_contract_version,
+)
 
 
 class SpecialistTransportError(RuntimeError):
@@ -41,10 +46,12 @@ class HttpSpecialistClient:
         request: IntelligenceRequest,
     ) -> IntelligenceResponse:
         payload = asdict(request)
+        payload["contract_version"] = CONTRACT_VERSION
         headers = {
             "Authorization": f"Bearer {self._api_token}",
             "Content-Type": "application/json",
             "X-Trace-Id": request.trace_id or "",
+            CONTRACT_VERSION_HEADER: CONTRACT_VERSION,
         }
 
         try:
@@ -56,6 +63,10 @@ class HttpSpecialistClient:
             )
             response.raise_for_status()
             body: dict[str, Any] = response.json()
+
+            response_headers = getattr(response, "headers", {}) or {}
+            validate_contract_version(response_headers.get(CONTRACT_VERSION_HEADER))
+            validate_contract_version(body.get("contract_version"))
         except (requests.RequestException, ValueError) as exc:
             raise SpecialistTransportError(
                 f"Specialist '{self._specialist_id}' request failed"
