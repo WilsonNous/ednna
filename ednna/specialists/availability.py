@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Protocol
 
 
 class SpecialistAvailability(str, Enum):
@@ -19,8 +20,27 @@ class SpecialistAvailabilityState:
     reason_code: str | None = None
 
 
+class SpecialistAvailabilityStore(Protocol):
+    def set(
+        self,
+        specialist_id: str,
+        status: SpecialistAvailability,
+        reason_code: str | None = None,
+    ) -> None:
+        ...
+
+    def get(self, specialist_id: str) -> SpecialistAvailabilityState:
+        ...
+
+    def is_routable(self, specialist_id: str) -> bool:
+        ...
+
+    def quarantine(self, specialist_id: str, reason_code: str) -> None:
+        ...
+
+
 class SpecialistAvailabilityRegistry:
-    """Runtime availability separate from static specialist capability metadata."""
+    """In-memory runtime availability store."""
 
     def __init__(self) -> None:
         self._states: dict[str, SpecialistAvailabilityState] = {}
