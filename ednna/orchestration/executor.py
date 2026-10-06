@@ -36,9 +36,20 @@ class PlanExecutor:
         input: dict,
         context: ExecutionContext | None = None,
     ) -> PlanExecutionResult:
+        return self.execute_plan(
+            self._planner.plan(goal),
+            input=input,
+            context=context,
+        )
+
+    def execute_plan(
+        self,
+        plan: OrchestrationPlan,
+        input: dict,
+        context: ExecutionContext | None = None,
+    ) -> PlanExecutionResult:
         active_context = context or ExecutionContext()
         trace_id = new_trace_id()
-        plan = self._planner.plan(goal)
         responses: list[IntelligenceResponse] = []
 
         for step in plan.steps:
