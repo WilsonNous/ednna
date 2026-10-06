@@ -3,6 +3,8 @@ from __future__ import annotations
 from .orchestration.gateway import IntelligenceGateway, SpecialistClient
 from .orchestration.registry import SpecialistRegistry
 from .orchestration.router import IntelligenceRouter
+from .specialists.availability import SpecialistAvailabilityRegistry
+from .specialists.availability_refresh import SpecialistAvailabilityRefresher
 from .specialists.catalog import (
     build_manifest_clients,
     load_catalog_from_env,
@@ -10,6 +12,7 @@ from .specialists.catalog import (
 )
 from .specialists.eddy import EDDY_DESCRIPTOR
 from .specialists.feature_flags import eddy_enabled
+from .specialists.handshake_feature_flags import specialist_handshake_enforced
 
 
 def build_registry() -> SpecialistRegistry:
@@ -19,16 +22,26 @@ def build_registry() -> SpecialistRegistry:
     return registry
 
 
-def build_router(registry: SpecialistRegistry | None = None) -> IntelligenceRouter:
-    return IntelligenceRouter(registry or build_registry())
+def build_router(
+    registry: SpecialistRegistry | None = None,
+    availability: SpecialistAvailabilityRegistry | None = None,
+) -> IntelligenceRouter:
+    return IntelligenceRouter(
+        registry or build_registry(),
+        availability=availability,
+    )
 
 
 def build_gateway(
     clients: dict[str, SpecialistClient] | None = None,
     registry: SpecialistRegistry | None = None,
+    availability: SpecialistAvailabilityRegistry | None = None,
 ) -> IntelligenceGateway:
     active_registry = registry or build_registry()
-    gateway = IntelligenceGateway(active_registry)
+    gateway = IntelligenceGateway(
+        active_registry,
+        availability=availability,
+    )
 
     for specialist_id, client in (clients or {}).items():
         gateway.register_client(specialist_id, client)
@@ -83,6 +96,16 @@ def build_executor(clients=None):
 
 def build_multiagent_components() -> tuple[SpecialistRegistry, IntelligenceGateway]:
     """Build a registry and gateway from the same active specialist catalog."""
+    registry, gateway, _availability = build_multiagent_runtime()
+    return registry, gateway
+
+
+def build_multiagent_runtime() -> tuple[
+    SpecialistRegistry,
+    IntelligenceGateway,
+    SpecialistAvailabilityRegistry | None,
+]:
+    """Build a consistent multiagent runtime, optionally gated by handshake."""
     manifests = load_catalog_from_env()
     registry = SpecialistRegistry()
     registry.register(EDDY_DESCRIPTOR)
@@ -94,4 +117,18 @@ def build_multiagent_components() -> tuple[SpecialistRegistry, IntelligenceGatew
 
         clients["eddy"] = build_eddy_client()
 
-    return registry, build_gateway(clients=clients, registry=registry)
+    availability = None
+    if specialist_handshake_enforced():
+        availability = SpecialistAvailabilityRegistry()
+        SpecialistAvailabilityRefresher(
+            registry,
+            availability,
+            clients,
+        ).refresh()
+
+    gateway = build_gateway(
+        clients=clients,
+        registry=registry,
+        availability=availability,
+    )
+    return registry, gateway, availability
