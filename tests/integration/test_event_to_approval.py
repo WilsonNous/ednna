@@ -3,12 +3,25 @@ from ednna.events.contracts import IntelligenceEvent
 from ednna.events.router import EventRouter
 from ednna.events.service import EventService
 from ednna.events.store import InMemoryEventStore
-from ednna.governance.approvals import InMemoryApprovalStore
+
+
+class CaptureApprovalStore:
+    def __init__(self):
+        self.saved = []
+
+    def save(self, approval):
+        self.saved.append(approval)
+
+    def get(self, approval_id):
+        return next(
+            (item for item in self.saved if item.approval_id == approval_id),
+            None,
+        )
 
 
 def test_authenticated_specialist_event_can_only_request_mapped_human_approval():
     event_store = InMemoryEventStore()
-    approvals = InMemoryApprovalStore()
+    approvals = CaptureApprovalStore()
     router = EventRouter()
     router.subscribe(
         "edi.operation.approval_required",
@@ -31,9 +44,8 @@ def test_authenticated_specialist_event_can_only_request_mapped_human_approval()
     handled = service.publish(event)
 
     assert handled == 1
-    saved = tuple(approvals._items.values())
-    assert len(saved) == 1
-    approval = saved[0]
+    assert len(approvals.saved) == 1
+    approval = approvals.saved[0]
     assert approval.capability == "edi.operation.execute"
     assert approval.trace_id == "trace-event-1"
     assert approval.tenant_id == "tenant-1"
