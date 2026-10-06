@@ -3,6 +3,7 @@ from ednna.api.eddy_query import create_eddy_query_blueprint
 from ednna.api.orchestration import create_orchestration_blueprint
 from ednna.governance.action_feature_flags import action_api_enabled
 from ednna.governance.feature_flags import approval_api_enabled
+from ednna.orchestration.multiagent_feature_flags import multiagent_query_api_enabled
 
 
 app.register_blueprint(create_orchestration_blueprint())
@@ -36,5 +37,20 @@ if action_api_enabled():
             build_eddy_gateway(),
             MySQLApprovalStore(action_db),
             MySQLIdempotencyStore(action_db),
+        )
+    )
+
+
+if multiagent_query_api_enabled():
+    from ednna.api.multiagent import create_multiagent_query_blueprint
+    from ednna.bootstrap import build_multiagent_components
+    from ednna.identity.bootstrap import build_oidc_authenticator
+
+    multiagent_registry, multiagent_gateway = build_multiagent_components()
+    app.register_blueprint(
+        create_multiagent_query_blueprint(
+            build_oidc_authenticator(),
+            multiagent_registry,
+            multiagent_gateway,
         )
     )
