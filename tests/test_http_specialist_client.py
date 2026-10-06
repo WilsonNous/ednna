@@ -146,6 +146,7 @@ def test_action_status_lookup_is_read_only_and_versioned():
             {
                 "contract_version": CONTRACT_VERSION,
                 "specialist_id": "eddy",
+                "idempotency_key": "action-key-1",
                 "state": "succeeded",
                 "trace_id": "trace-123",
                 "evidence": [{"type": "receipt", "id": "r-1"}],
@@ -172,3 +173,26 @@ def test_action_status_lookup_is_read_only_and_versioned():
     assert status.state.value == "succeeded"
     assert status.reference == "eddy:r-1"
     assert status.evidence[0]["id"] == "r-1"
+
+
+def test_action_status_rejects_mismatched_action_identity():
+    session = FakeSession(
+        FakeResponse(
+            {
+                "contract_version": CONTRACT_VERSION,
+                "specialist_id": "eddy",
+                "idempotency_key": "another-action",
+                "state": "succeeded",
+            },
+            headers={CONTRACT_VERSION_HEADER: CONTRACT_VERSION},
+        )
+    )
+    client = HttpSpecialistClient(
+        specialist_id="eddy",
+        base_url="https://eddy.internal",
+        api_token="token",
+        session=session,
+    )
+
+    with pytest.raises(SpecialistTransportError):
+        client.action_status("action-key-1", "trace-123")
