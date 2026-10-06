@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ednna.specialists.availability import SpecialistAvailabilityRegistry
+from ednna.specialists.availability import SpecialistAvailabilityStore
 
 from .contracts import IntelligenceRequest, SpecialistDescriptor
 from .registry import SpecialistRegistry
@@ -16,7 +16,7 @@ class IntelligenceRouter:
     def __init__(
         self,
         registry: SpecialistRegistry,
-        availability: SpecialistAvailabilityRegistry | None = None,
+        availability: SpecialistAvailabilityStore | None = None,
     ) -> None:
         self._registry = registry
         self._availability = availability
