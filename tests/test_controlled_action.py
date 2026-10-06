@@ -200,7 +200,6 @@ def test_approval_cannot_be_reused_for_different_action_key():
 
 
 def build_controlled_service_with_ledger(client, ledger):
-    from ednna.governance.action_ledger import InMemoryActionExecutionLedger
     from ednna.orchestration.controlled_action import ControlledActionService
     from ednna.orchestration.gateway import IntelligenceGateway
     from ednna.orchestration.registry import SpecialistRegistry
