@@ -9,8 +9,10 @@ from ednna.specialists.availability import (
 )
 from ednna.specialists.handshake import (
     SpecialistHandshake,
+    SpecialistHandshakeError,
     validate_handshake_compatibility,
 )
+from ednna.specialists.protocol import UnsupportedContractVersionError
 
 
 class HandshakeClient(Protocol):
@@ -40,22 +42,18 @@ class SpecialistAvailabilityRefresher:
             try:
                 handshake = client.handshake()
                 validate_handshake_compatibility(specialist, handshake)
-            except Exception as exc:
-                error_type = type(exc).__name__
-                if error_type in {
-                    "SpecialistHandshakeError",
-                    "UnsupportedContractVersionError",
-                }:
-                    self._availability.quarantine(
-                        specialist.specialist_id,
-                        "handshake_incompatible",
-                    )
-                else:
-                    self._availability.set(
-                        specialist.specialist_id,
-                        SpecialistAvailability.UNAVAILABLE,
-                        reason_code="handshake_failed",
-                    )
+            except (SpecialistHandshakeError, UnsupportedContractVersionError):
+                self._availability.quarantine(
+                    specialist.specialist_id,
+                    "handshake_incompatible",
+                )
+                continue
+            except Exception:
+                self._availability.set(
+                    specialist.specialist_id,
+                    SpecialistAvailability.UNAVAILABLE,
+                    reason_code="handshake_failed",
+                )
                 continue
 
             status = handshake.status.strip().lower()
