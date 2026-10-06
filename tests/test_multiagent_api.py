@@ -89,7 +89,7 @@ def test_multiagent_query_requires_permission_for_every_planned_capability():
     response = client.post(
         "/api/orchestration/query",
         headers=headers(),
-        json={"goal": "consultar EDI e exposição financeira do cliente", "input": {}},
+        json={"goal": "estado geral da operação EDI e exposição financeira do cliente", "input": {}},
     )
 
     assert response.status_code == 403
@@ -106,7 +106,7 @@ def test_multiagent_query_combines_authorized_specialists():
     response = client.post(
         "/api/orchestration/query",
         headers=headers(),
-        json={"goal": "consultar EDI e exposição financeira do cliente", "input": {}},
+        json={"goal": "estado geral da operação EDI e exposição financeira do cliente", "input": {}},
     )
 
     assert response.status_code == 200
