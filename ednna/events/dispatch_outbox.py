@@ -15,7 +15,7 @@ def main() -> int:
         MySQLOutboxStore(DatabaseSettings.from_env()),
         build_servicebus_publisher(),
     )
-    delivered, failed = dispatcher.dispatch(limit=100)
+    _delivered, failed = dispatcher.dispatch(limit=100)
     return 0 if failed == 0 else 1
 
 
