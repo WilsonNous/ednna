@@ -1,12 +1,15 @@
 from app import app
 from ednna.api.eddy_query import create_eddy_query_blueprint
 from ednna.api.orchestration import create_orchestration_blueprint
+from ednna.api.readiness import create_readiness_blueprint
 from ednna.governance.action_feature_flags import action_api_enabled
 from ednna.governance.feature_flags import approval_api_enabled
+from ednna.events.feature_flags import event_ingress_api_enabled
 from ednna.orchestration.multiagent_feature_flags import multiagent_query_api_enabled
 
 
 app.register_blueprint(create_orchestration_blueprint())
+app.register_blueprint(create_readiness_blueprint())
 app.register_blueprint(create_eddy_query_blueprint())
 
 if approval_api_enabled():
@@ -52,5 +55,25 @@ if multiagent_query_api_enabled():
             build_oidc_authenticator(),
             multiagent_registry,
             multiagent_gateway,
+        )
+    )
+
+
+if event_ingress_api_enabled():
+    from ednna.api.events import create_event_ingress_blueprint
+    from ednna.events.bootstrap import build_event_router
+    from ednna.events.mysql_store import MySQLEventStore
+    from ednna.events.service import EventService
+    from ednna.governance.mysql_stores import MySQLApprovalStore
+    from ednna.identity.bootstrap import build_oidc_authenticator
+    from ednna.settings import DatabaseSettings
+
+    event_db = DatabaseSettings.from_env()
+    event_store = MySQLEventStore(event_db)
+    approval_store = MySQLApprovalStore(event_db)
+    app.register_blueprint(
+        create_event_ingress_blueprint(
+            build_oidc_authenticator(),
+            EventService(event_store, build_event_router(approval_store)),
         )
     )

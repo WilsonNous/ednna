@@ -1,0 +1,29 @@
+{
+  "migrations": [
+    {
+      "version": "000",
+      "filename": "000_schema_migrations.sql",
+      "description": "Create orchestration schema migration registry."
+    },
+    {
+      "version": "001",
+      "filename": "001_orchestration_governance.sql",
+      "description": "Create audit, approvals and idempotency tables."
+    },
+    {
+      "version": "002",
+      "filename": "002_approval_tenant_scope.sql",
+      "description": "Add tenant/requester scope to approvals."
+    },
+    {
+      "version": "003",
+      "filename": "003_event_outbox.sql",
+      "description": "Create durable event outbox."
+    },
+    {
+      "version": "004",
+      "filename": "004_event_inbox.sql",
+      "description": "Create durable event inbox."
+    }
+  ]
+}

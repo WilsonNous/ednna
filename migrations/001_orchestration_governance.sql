@@ -35,3 +35,6 @@ CREATE TABLE IF NOT EXISTS orchestration_idempotency (
     idempotency_key VARCHAR(255) PRIMARY KEY,
     reserved_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
 );
+
+INSERT IGNORE INTO orchestration_schema_migrations (version, filename)
+VALUES ('001', '001_orchestration_governance.sql');
