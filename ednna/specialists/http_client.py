@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any
+from urllib.parse import quote
 
 import requests
 
@@ -83,9 +84,11 @@ class HttpSpecialistClient:
             "X-Trace-Id": trace_id or "",
         }
 
+        encoded_key = quote(idempotency_key, safe="")
+
         try:
             response = self._session.get(
-                f"{self._base_url}/api/intelligence/actions/{idempotency_key}",
+                f"{self._base_url}/api/intelligence/actions/{encoded_key}",
                 headers=headers,
                 timeout=self._timeout_seconds,
             )
@@ -95,6 +98,14 @@ class HttpSpecialistClient:
             response_headers = getattr(response, "headers", {}) or {}
             validate_contract_version(response_headers.get(CONTRACT_VERSION_HEADER))
             validate_contract_version(body.get("contract_version"))
+
+            remote_specialist_id = str(body.get("specialist_id", ""))
+            remote_idempotency_key = str(body.get("idempotency_key", ""))
+            if remote_specialist_id != self._specialist_id:
+                raise ValueError("specialist_id mismatch")
+            if remote_idempotency_key != idempotency_key:
+                raise ValueError("idempotency_key mismatch")
+
             state = SpecialistActionState(str(body.get("state", "unknown")))
         except (requests.RequestException, ValueError) as exc:
             raise SpecialistTransportError(
@@ -102,7 +113,7 @@ class HttpSpecialistClient:
             ) from exc
 
         return SpecialistActionStatus(
-            specialist_id=str(body.get("specialist_id", self._specialist_id)),
+            specialist_id=remote_specialist_id,
             idempotency_key=idempotency_key,
             state=state,
             trace_id=body.get("trace_id", trace_id),
