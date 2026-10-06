@@ -29,6 +29,7 @@ if approval_api_enabled():
 if action_api_enabled():
     from ednna.api.actions import create_action_blueprint
     from ednna.bootstrap import build_eddy_gateway
+    from ednna.governance.mysql_action_ledger import MySQLActionExecutionLedger
     from ednna.governance.mysql_stores import MySQLApprovalStore, MySQLIdempotencyStore
     from ednna.identity.bootstrap import build_oidc_authenticator
     from ednna.settings import DatabaseSettings
@@ -40,6 +41,7 @@ if action_api_enabled():
             build_eddy_gateway(),
             MySQLApprovalStore(action_db),
             MySQLIdempotencyStore(action_db),
+            MySQLActionExecutionLedger(action_db),
         )
     )
 
