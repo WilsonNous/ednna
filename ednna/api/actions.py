@@ -3,7 +3,11 @@ from __future__ import annotations
 from flask import Blueprint, g, jsonify, request
 
 from ednna.governance.action_control import ActionAuthorization, ActionAuthorizer
-from ednna.governance.approvals import ApprovalStatus, ApprovalStore
+from ednna.governance.approvals import (
+    ApprovalAlreadyBoundError,
+    ApprovalStatus,
+    ApprovalStore,
+)
 from ednna.governance.action_execution import (
     ActionExecutionMode,
     action_execution_mode,
@@ -116,6 +120,8 @@ def create_action_blueprint(
                 action_request,
                 action_authorization,
             )
+        except ApprovalAlreadyBoundError:
+            return jsonify({"error": "approval already bound to another action"}), 409
         except DuplicateActionError:
             return jsonify({"error": "duplicate action blocked"}), 409
         except Exception:
