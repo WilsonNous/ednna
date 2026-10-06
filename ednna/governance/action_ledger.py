@@ -37,6 +37,9 @@ class ActionExecutionRecord:
 
 
 class ActionExecutionLedger(Protocol):
+    def get(self, idempotency_key: str) -> ActionExecutionRecord | None:
+        ...
+
     def start(
         self,
         idempotency_key: str,
