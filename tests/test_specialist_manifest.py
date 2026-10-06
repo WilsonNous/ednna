@@ -70,7 +70,7 @@ def test_planner_can_combine_multiple_specialists_from_catalog(tmp_path):
         registry.register(manifest.descriptor)
 
     planner = Planner(CapabilityDiscovery(registry), minimum_score=1.0, maximum_steps=3)
-    plan = planner.plan("consultar EDI e exposição financeira do cliente")
+    plan = planner.plan("estado geral da operação EDI e exposição financeira do cliente")
 
     specialist_ids = {step.specialist_id for step in plan.steps}
     assert "eddy" in specialist_ids
