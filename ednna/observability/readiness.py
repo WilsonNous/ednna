@@ -36,6 +36,7 @@ class ReadinessChecker:
             self._eddy(),
             self._servicebus(),
             self._specialist_catalog(),
+            self._specialist_health_worker(),
         ]
         active = tuple(check for check in checks if check is not None)
         return ReadinessReport(
@@ -126,6 +127,18 @@ class ReadinessChecker:
             component="servicebus",
             ready=not missing,
             reason=f"missing:{','.join(missing)}" if missing else None,
+        )
+
+    @staticmethod
+    def _specialist_health_worker() -> ReadinessCheck | None:
+        if not _enabled("SPECIALIST_HEALTH_WORKER_ENABLED"):
+            return None
+
+        durable = _enabled("SPECIALIST_AVAILABILITY_DURABLE")
+        return ReadinessCheck(
+            component="specialist_health_worker",
+            ready=durable,
+            reason=None if durable else "durable_availability_required",
         )
 
     @staticmethod
