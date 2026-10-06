@@ -24,6 +24,11 @@
       "version": "004",
       "filename": "004_event_inbox.sql",
       "description": "Create durable event inbox."
+    },
+    {
+      "version": "005",
+      "filename": "005_specialist_availability.sql",
+      "description": "Create durable specialist availability state."
     }
   ]
 }
