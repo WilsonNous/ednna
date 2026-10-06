@@ -4,7 +4,7 @@ from flask import Blueprint, g, jsonify, request
 
 from ednna.governance.action_control import ActionAuthorization, ActionAuthorizer
 from ednna.governance.approvals import ApprovalStatus, ApprovalStore
-from ednna.governance.idempotency import IdempotencyStore
+from ednna.governance.idempotency import DuplicateActionError, IdempotencyStore
 from ednna.governance.policies import CapabilityPolicy, GovernancePolicyRegistry
 from ednna.identity.authorization import AuthorizationDeniedError, AuthorizationService
 from ednna.identity.flask_auth import require_auth
@@ -87,6 +87,8 @@ def create_action_blueprint(
                     approval_id=approval_id,
                 ),
             )
+        except DuplicateActionError:
+            return jsonify({"error": "duplicate action blocked"}), 409
         except Exception:
             return jsonify({"error": "controlled action failed"}), 502
 
