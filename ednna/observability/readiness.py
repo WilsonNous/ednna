@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from ednna.governance.action_execution import action_execution_mode_valid
+
 
 @dataclass(frozen=True)
 class ReadinessCheck:
@@ -33,6 +35,7 @@ class ReadinessChecker:
             self._base_app(),
             self._database(),
             self._oidc(),
+            self._action_execution_mode(),
             self._eddy(),
             self._servicebus(),
             self._specialist_catalog(),
@@ -96,6 +99,18 @@ class ReadinessChecker:
             component="oidc",
             ready=not missing,
             reason=f"missing:{','.join(missing)}" if missing else None,
+        )
+
+    @staticmethod
+    def _action_execution_mode() -> ReadinessCheck | None:
+        if not _enabled("ACTION_API_ENABLED"):
+            return None
+
+        valid = action_execution_mode_valid()
+        return ReadinessCheck(
+            component="action_execution_mode",
+            ready=valid,
+            reason=None if valid else "invalid_action_execution_mode",
         )
 
     @staticmethod
