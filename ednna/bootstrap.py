@@ -79,3 +79,19 @@ def build_executor(clients=None):
     planner = Planner(CapabilityDiscovery(registry))
     service = OrchestrationService(gateway, GovernancePolicyRegistry())
     return PlanExecutor(planner, service)
+
+
+def build_multiagent_components() -> tuple[SpecialistRegistry, IntelligenceGateway]:
+    """Build a registry and gateway from the same active specialist catalog."""
+    manifests = load_catalog_from_env()
+    registry = SpecialistRegistry()
+    registry.register(EDDY_DESCRIPTOR)
+    register_catalog(registry, manifests)
+
+    clients = build_manifest_clients(manifests)
+    if eddy_enabled():
+        from .specialists.eddy_client import build_eddy_client
+
+        clients["eddy"] = build_eddy_client()
+
+    return registry, build_gateway(clients=clients, registry=registry)
