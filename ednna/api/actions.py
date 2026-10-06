@@ -3,7 +3,11 @@ from __future__ import annotations
 from flask import Blueprint, g, jsonify, request
 
 from ednna.governance.action_control import ActionAuthorization, ActionAuthorizer
-from ednna.governance.action_ledger import ActionExecutionLedger
+from ednna.governance.action_ledger import (
+    ActionExecutionLedger,
+    ActionExecutionNotReconcilableError,
+    ActionExecutionStatus,
+)
 from ednna.governance.approvals import (
     ApprovalAlreadyBoundError,
     ApprovalStatus,
@@ -85,6 +89,78 @@ def create_action_blueprint(
                 "response_status": record.response_status,
                 "evidence_count": record.evidence_count,
                 "error_type": record.error_type,
+                "reconciled_at": (
+                    record.reconciled_at.isoformat()
+                    if record.reconciled_at
+                    else None
+                ),
+                "reconciled_by": record.reconciled_by,
+                "reconciliation_reference": record.reconciliation_reference,
+            }
+        )
+
+    @blueprint.post("/executions/<path:idempotency_key>/reconcile")
+    @authenticated
+    def reconcile_action_execution(idempotency_key: str):
+        principal = g.principal
+
+        try:
+            authorization.require(principal, "ednna.actions:reconcile")
+        except AuthorizationDeniedError:
+            return jsonify({"error": "forbidden"}), 403
+
+        if ledger is None:
+            return jsonify({"error": "action ledger unavailable"}), 503
+
+        try:
+            current = ledger.get(idempotency_key)
+        except Exception:
+            return jsonify({"error": "action ledger lookup failed"}), 502
+
+        if current is None or current.tenant_id != principal.tenant_id:
+            return jsonify({"error": "not found"}), 404
+
+        payload = request.get_json(silent=True) or {}
+        decision = str(payload.get("decision", "")).strip()
+        note = str(payload.get("note", "")).strip()
+        reference = str(payload.get("reference", "")).strip()
+
+        status_by_decision = {
+            "confirmed_succeeded": ActionExecutionStatus.RECONCILED_SUCCEEDED,
+            "confirmed_not_executed": ActionExecutionStatus.RECONCILED_NOT_EXECUTED,
+        }
+        target_status = status_by_decision.get(decision)
+
+        if target_status is None:
+            return jsonify({"error": "invalid reconciliation decision"}), 400
+        if not note or not reference:
+            return jsonify({"error": "note and reference are required"}), 400
+
+        try:
+            reconciled = ledger.reconcile(
+                idempotency_key,
+                target_status,
+                reconciled_by=principal.user_id,
+                note=note,
+                reference=reference,
+            )
+        except ActionExecutionNotReconcilableError:
+            return jsonify({"error": "action execution is not reconcilable"}), 409
+        except Exception:
+            return jsonify({"error": "action reconciliation failed"}), 502
+
+        return jsonify(
+            {
+                "idempotency_key": reconciled.idempotency_key,
+                "trace_id": reconciled.trace_id,
+                "status": reconciled.status.value,
+                "reconciled_at": (
+                    reconciled.reconciled_at.isoformat()
+                    if reconciled.reconciled_at
+                    else None
+                ),
+                "reconciled_by": reconciled.reconciled_by,
+                "reconciliation_reference": reconciled.reconciliation_reference,
             }
         )
 
