@@ -67,3 +67,28 @@ def test_specialist_health_worker_requires_durable_availability(monkeypatch):
     assert worker.ready is False
     assert worker.reason == "durable_availability_required"
     assert report.ready is False
+
+
+def test_action_api_rejects_invalid_execution_mode_in_readiness(monkeypatch):
+    set_base(monkeypatch)
+    monkeypatch.setenv("ACTION_API_ENABLED", "true")
+    monkeypatch.setenv("ACTION_EXECUTION_MODE", "typo")
+    monkeypatch.setenv("DB_HOST", "db")
+    monkeypatch.setenv("DB_USER", "user")
+    monkeypatch.setenv("DB_PASSWORD", "password")
+    monkeypatch.setenv("DB_NAME", "ednna")
+    monkeypatch.setenv("OIDC_ISSUER", "https://issuer/")
+    monkeypatch.setenv("OIDC_AUDIENCE", "api://ednna")
+    monkeypatch.setenv("OIDC_JWKS_URL", "https://issuer/keys")
+    monkeypatch.setenv("EDDY_BASE_URL", "https://eddy")
+    monkeypatch.setenv("EDDY_API_TOKEN", "token")
+
+    report = ReadinessChecker().check()
+
+    mode = next(
+        check
+        for check in report.checks
+        if check.component == "action_execution_mode"
+    )
+    assert mode.ready is False
+    assert report.ready is False
