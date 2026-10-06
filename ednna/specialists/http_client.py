@@ -2,10 +2,18 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any
+from urllib.parse import quote
 
 import requests
 
 from ednna.orchestration.contracts import IntelligenceRequest, IntelligenceResponse
+from ednna.specialists.action_status import SpecialistActionState, SpecialistActionStatus
+from ednna.specialists.handshake import SpecialistHandshake
+from ednna.specialists.protocol import (
+    CONTRACT_VERSION,
+    CONTRACT_VERSION_HEADER,
+    validate_contract_version,
+)
 
 
 class SpecialistTransportError(RuntimeError):
@@ -29,11 +37,89 @@ class HttpSpecialistClient:
         self._timeout_seconds = timeout_seconds
         self._session = session or requests.Session()
 
+    def handshake(self) -> SpecialistHandshake:
+        headers = {
+            "Authorization": f"Bearer {self._api_token}",
+            CONTRACT_VERSION_HEADER: CONTRACT_VERSION,
+        }
+
+        try:
+            response = self._session.get(
+                f"{self._base_url}/api/intelligence/handshake",
+                headers=headers,
+                timeout=self._timeout_seconds,
+            )
+            response.raise_for_status()
+            body: dict[str, Any] = response.json()
+
+            response_headers = getattr(response, "headers", {}) or {}
+            validate_contract_version(response_headers.get(CONTRACT_VERSION_HEADER))
+            validate_contract_version(body.get("contract_version"))
+        except (requests.RequestException, ValueError) as exc:
+            raise SpecialistTransportError(
+                f"Specialist '{self._specialist_id}' handshake failed"
+            ) from exc
+
+        return SpecialistHandshake(
+            specialist_id=str(body.get("specialist_id", "")),
+            contract_version=str(body.get("contract_version", "")),
+            capabilities=tuple(str(item) for item in body.get("capabilities", [])),
+            status=str(body.get("status", "unknown")),
+        )
+
     def query(self, request: IntelligenceRequest) -> IntelligenceResponse:
         return self._post("/api/intelligence/query", request)
 
     def action(self, request: IntelligenceRequest) -> IntelligenceResponse:
         return self._post("/api/intelligence/action", request)
+
+    def action_status(
+        self,
+        idempotency_key: str,
+        trace_id: str | None = None,
+    ) -> SpecialistActionStatus:
+        headers = {
+            "Authorization": f"Bearer {self._api_token}",
+            CONTRACT_VERSION_HEADER: CONTRACT_VERSION,
+            "X-Trace-Id": trace_id or "",
+        }
+
+        encoded_key = quote(idempotency_key, safe="")
+
+        try:
+            response = self._session.get(
+                f"{self._base_url}/api/intelligence/actions/{encoded_key}",
+                headers=headers,
+                timeout=self._timeout_seconds,
+            )
+            response.raise_for_status()
+            body: dict[str, Any] = response.json()
+
+            response_headers = getattr(response, "headers", {}) or {}
+            validate_contract_version(response_headers.get(CONTRACT_VERSION_HEADER))
+            validate_contract_version(body.get("contract_version"))
+
+            remote_specialist_id = str(body.get("specialist_id", ""))
+            remote_idempotency_key = str(body.get("idempotency_key", ""))
+            if remote_specialist_id != self._specialist_id:
+                raise ValueError("specialist_id mismatch")
+            if remote_idempotency_key != idempotency_key:
+                raise ValueError("idempotency_key mismatch")
+
+            state = SpecialistActionState(str(body.get("state", "unknown")))
+        except (requests.RequestException, ValueError) as exc:
+            raise SpecialistTransportError(
+                f"Specialist '{self._specialist_id}' action status lookup failed"
+            ) from exc
+
+        return SpecialistActionStatus(
+            specialist_id=remote_specialist_id,
+            idempotency_key=idempotency_key,
+            state=state,
+            trace_id=body.get("trace_id", trace_id),
+            evidence=tuple(body.get("evidence", [])),
+            reference=body.get("reference"),
+        )
 
     def _post(
         self,
@@ -41,10 +127,12 @@ class HttpSpecialistClient:
         request: IntelligenceRequest,
     ) -> IntelligenceResponse:
         payload = asdict(request)
+        payload["contract_version"] = CONTRACT_VERSION
         headers = {
             "Authorization": f"Bearer {self._api_token}",
             "Content-Type": "application/json",
             "X-Trace-Id": request.trace_id or "",
+            CONTRACT_VERSION_HEADER: CONTRACT_VERSION,
         }
 
         try:
@@ -56,6 +144,10 @@ class HttpSpecialistClient:
             )
             response.raise_for_status()
             body: dict[str, Any] = response.json()
+
+            response_headers = getattr(response, "headers", {}) or {}
+            validate_contract_version(response_headers.get(CONTRACT_VERSION_HEADER))
+            validate_contract_version(body.get("contract_version"))
         except (requests.RequestException, ValueError) as exc:
             raise SpecialistTransportError(
                 f"Specialist '{self._specialist_id}' request failed"

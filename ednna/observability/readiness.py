@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from ednna.governance.action_execution import action_execution_mode_valid
+
 
 @dataclass(frozen=True)
 class ReadinessCheck:
@@ -33,9 +35,11 @@ class ReadinessChecker:
             self._base_app(),
             self._database(),
             self._oidc(),
+            self._action_execution_mode(),
             self._eddy(),
             self._servicebus(),
             self._specialist_catalog(),
+            self._specialist_health_worker(),
         ]
         active = tuple(check for check in checks if check is not None)
         return ReadinessReport(
@@ -62,6 +66,8 @@ class ReadinessChecker:
                 "EVENT_INGRESS_API_ENABLED",
                 "SERVICEBUS_OUTBOX_ENABLED",
                 "SERVICEBUS_CONSUMER_ENABLED",
+                "SPECIALIST_AVAILABILITY_DURABLE",
+                "SPECIALIST_HEALTH_WORKER_ENABLED",
             )
         )
         if not db_required:
@@ -96,6 +102,18 @@ class ReadinessChecker:
         )
 
     @staticmethod
+    def _action_execution_mode() -> ReadinessCheck | None:
+        if not _enabled("ACTION_API_ENABLED"):
+            return None
+
+        valid = action_execution_mode_valid()
+        return ReadinessCheck(
+            component="action_execution_mode",
+            ready=valid,
+            reason=None if valid else "invalid_action_execution_mode",
+        )
+
+    @staticmethod
     def _eddy() -> ReadinessCheck | None:
         if not (_enabled("EDDY_ENABLED") or _enabled("ACTION_API_ENABLED")):
             return None
@@ -124,6 +142,18 @@ class ReadinessChecker:
             component="servicebus",
             ready=not missing,
             reason=f"missing:{','.join(missing)}" if missing else None,
+        )
+
+    @staticmethod
+    def _specialist_health_worker() -> ReadinessCheck | None:
+        if not _enabled("SPECIALIST_HEALTH_WORKER_ENABLED"):
+            return None
+
+        durable = _enabled("SPECIALIST_AVAILABILITY_DURABLE")
+        return ReadinessCheck(
+            component="specialist_health_worker",
+            ready=durable,
+            reason=None if durable else "durable_availability_required",
         )
 
     @staticmethod

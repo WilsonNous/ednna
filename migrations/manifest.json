@@ -24,6 +24,26 @@
       "version": "004",
       "filename": "004_event_inbox.sql",
       "description": "Create durable event inbox."
+    },
+    {
+      "version": "005",
+      "filename": "005_specialist_availability.sql",
+      "description": "Create durable specialist availability state."
+    },
+    {
+      "version": "006",
+      "filename": "006_approval_action_binding.sql",
+      "description": "Bind approved decisions to a single idempotent action."
+    },
+    {
+      "version": "007",
+      "filename": "007_action_execution_ledger.sql",
+      "description": "Track controlled action execution outcomes and uncertainty."
+    },
+    {
+      "version": "008",
+      "filename": "008_action_reconciliation.sql",
+      "description": "Record manual resolution of uncertain action executions."
     }
   ]
 }

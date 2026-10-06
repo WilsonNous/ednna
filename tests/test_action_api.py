@@ -26,10 +26,14 @@ class FakeAuthenticator(OIDCAuthenticator):
 
 
 class FakeEddyClient:
+    def __init__(self):
+        self.actions = []
+
     def query(self, request: IntelligenceRequest):
         raise AssertionError("query should not be used")
 
     def action(self, request: IntelligenceRequest):
+        self.actions.append(request)
         return IntelligenceResponse(
             specialist_id="eddy",
             capability=request.capability,
@@ -68,7 +72,8 @@ def build_client(
     registry = SpecialistRegistry()
     registry.register(EDDY_DESCRIPTOR)
     gateway = IntelligenceGateway(registry)
-    gateway.register_client("eddy", FakeEddyClient())
+    eddy = FakeEddyClient()
+    gateway.register_client("eddy", eddy)
 
     app = Flask(__name__)
     app.register_blueprint(
@@ -79,7 +84,7 @@ def build_client(
             InMemoryIdempotencyStore(),
         )
     )
-    return app.test_client()
+    return app.test_client(), eddy
 
 
 def headers():
@@ -87,7 +92,7 @@ def headers():
 
 
 def test_action_requires_explicit_permission():
-    client = build_client(permissions=())
+    client, _eddy = build_client(permissions=())
 
     response = client.post(
         "/api/actions/edi/operation/execute",
@@ -103,7 +108,7 @@ def test_action_requires_explicit_permission():
 
 
 def test_action_requires_same_tenant_approval():
-    client = build_client(approval_tenant="other-tenant")
+    client, _eddy = build_client(approval_tenant="other-tenant")
 
     response = client.post(
         "/api/actions/edi/operation/execute",
@@ -118,8 +123,34 @@ def test_action_requires_same_tenant_approval():
     assert response.status_code == 403
 
 
-def test_action_executes_only_with_permission_approval_and_idempotency():
-    client = build_client()
+def test_action_defaults_to_dry_run_without_calling_eddy(monkeypatch):
+    monkeypatch.delenv("ACTION_EXECUTION_MODE", raising=False)
+    client, eddy = build_client()
+
+    response = client.post(
+        "/api/actions/edi/operation/execute",
+        headers=headers(),
+        json={
+            "approval_id": "approval-1",
+            "idempotency_key": "key-1",
+            "input": {"issue_id": 123},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["status"] == "dry_run"
+    assert payload["output"] == {
+        "validated": True,
+        "executed": False,
+    }
+    assert payload["trace_id"] == "trace-1"
+    assert eddy.actions == []
+
+
+def test_live_action_executes_only_when_explicitly_enabled(monkeypatch):
+    monkeypatch.setenv("ACTION_EXECUTION_MODE", "live")
+    client, eddy = build_client()
 
     response = client.post(
         "/api/actions/edi/operation/execute",
@@ -135,3 +166,4 @@ def test_action_executes_only_with_permission_approval_and_idempotency():
     payload = response.get_json()
     assert payload["status"] == "success"
     assert payload["trace_id"] == "trace-1"
+    assert len(eddy.actions) == 1

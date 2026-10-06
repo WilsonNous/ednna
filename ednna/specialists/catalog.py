@@ -6,8 +6,13 @@ from pathlib import Path
 from ednna.orchestration.gateway import SpecialistClient
 from ednna.orchestration.registry import SpecialistRegistry
 
+from .conformance import SpecialistConformanceValidator
 from .http_client import HttpSpecialistClient
 from .manifest import SpecialistManifest, load_specialist_manifests
+
+
+class SpecialistConformanceError(ValueError):
+    pass
 
 
 def load_catalog_from_env() -> tuple[SpecialistManifest, ...]:
@@ -21,7 +26,16 @@ def register_catalog(
     registry: SpecialistRegistry,
     manifests: tuple[SpecialistManifest, ...],
 ) -> None:
+    validator = SpecialistConformanceValidator()
+
     for manifest in manifests:
+        report = validator.validate(manifest)
+        if not report.valid:
+            codes = ",".join(issue.code for issue in report.issues)
+            raise SpecialistConformanceError(
+                f"Specialist '{report.specialist_id}' failed conformance: {codes}"
+            )
+
         registry.register(manifest.descriptor)
 
 

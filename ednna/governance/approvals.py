@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Protocol
@@ -11,6 +11,14 @@ class ApprovalStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+
+
+class ApprovalAlreadyBoundError(PermissionError):
+    pass
+
+
+class ApprovalNotFoundForBindingError(LookupError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -27,6 +35,8 @@ class ApprovalRequest:
     decided_at: datetime | None = None
     decided_by: str | None = None
     decision_note: str | None = None
+    action_idempotency_key: str | None = None
+    action_bound_at: datetime | None = None
 
 
 class ApprovalStore(Protocol):
@@ -34,6 +44,13 @@ class ApprovalStore(Protocol):
         ...
 
     def get(self, approval_id: str) -> ApprovalRequest | None:
+        ...
+
+    def bind_action(
+        self,
+        approval_id: str,
+        idempotency_key: str,
+    ) -> ApprovalRequest:
         ...
 
 
@@ -46,6 +63,30 @@ class InMemoryApprovalStore:
 
     def get(self, approval_id: str) -> ApprovalRequest | None:
         return self._items.get(approval_id)
+
+    def bind_action(
+        self,
+        approval_id: str,
+        idempotency_key: str,
+    ) -> ApprovalRequest:
+        current = self._items.get(approval_id)
+        if current is None:
+            raise ApprovalNotFoundForBindingError(approval_id)
+
+        if current.action_idempotency_key is not None:
+            if current.action_idempotency_key == idempotency_key:
+                return current
+            raise ApprovalAlreadyBoundError(
+                "Approval is already bound to another action"
+            )
+
+        bound = replace(
+            current,
+            action_idempotency_key=idempotency_key,
+            action_bound_at=datetime.now(timezone.utc),
+        )
+        self._items[approval_id] = bound
+        return bound
 
 
 def new_approval_request(
