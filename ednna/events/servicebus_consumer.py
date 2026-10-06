@@ -20,6 +20,7 @@ class AzureServiceBusConsumer:
         event_service: EventService,
         credential=None,
         client: ServiceBusClient | None = None,
+        max_delivery_attempts: int = 5,
     ) -> None:
         self._topic_name = topic_name
         self._subscription_name = subscription_name
@@ -29,14 +30,16 @@ class AzureServiceBusConsumer:
             fully_qualified_namespace=fully_qualified_namespace,
             credential=self._credential,
         )
+        self._max_delivery_attempts = max_delivery_attempts
 
     def receive_once(
         self,
         max_message_count: int = 50,
         max_wait_time: int = 5,
-    ) -> tuple[int, int]:
+    ) -> tuple[int, int, int]:
         processed = 0
         failed = 0
+        dead_lettered = 0
 
         with self._client.get_subscription_receiver(
             topic_name=self._topic_name,
@@ -52,15 +55,24 @@ class AzureServiceBusConsumer:
                 try:
                     event = self._to_event(message)
                     self._event_service.publish(event)
-                except Exception:
-                    receiver.abandon_message(message)
-                    failed += 1
+                except Exception as exc:
+                    delivery_count = int(getattr(message, "delivery_count", 0) or 0)
+                    if delivery_count >= self._max_delivery_attempts:
+                        receiver.dead_letter_message(
+                            message,
+                            reason="ProcessingFailure",
+                            error_description=type(exc).__name__,
+                        )
+                        dead_lettered += 1
+                    else:
+                        receiver.abandon_message(message)
+                        failed += 1
                     continue
 
                 receiver.complete_message(message)
                 processed += 1
 
-        return processed, failed
+        return processed, failed, dead_lettered
 
     @staticmethod
     def _to_event(message) -> IntelligenceEvent:
@@ -94,6 +106,7 @@ def build_servicebus_consumer(event_service: EventService) -> AzureServiceBusCon
     namespace = os.getenv("SERVICEBUS_NAMESPACE", "").strip()
     topic = os.getenv("SERVICEBUS_TOPIC", "").strip()
     subscription = os.getenv("SERVICEBUS_SUBSCRIPTION", "").strip()
+    max_delivery_attempts = int(os.getenv("SERVICEBUS_MAX_DELIVERY_ATTEMPTS", "5"))
 
     if not namespace or not topic or not subscription:
         raise RuntimeError(
@@ -105,4 +118,5 @@ def build_servicebus_consumer(event_service: EventService) -> AzureServiceBusCon
         topic_name=topic,
         subscription_name=subscription,
         event_service=event_service,
+        max_delivery_attempts=max_delivery_attempts,
     )
