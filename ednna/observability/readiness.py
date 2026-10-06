@@ -62,6 +62,7 @@ class ReadinessChecker:
                 "EVENT_INGRESS_API_ENABLED",
                 "SERVICEBUS_OUTBOX_ENABLED",
                 "SERVICEBUS_CONSUMER_ENABLED",
+                "SPECIALIST_AVAILABILITY_DURABLE",
             )
         )
         if not db_required:
