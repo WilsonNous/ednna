@@ -19,8 +19,8 @@ def main() -> int:
         build_event_router(MySQLApprovalStore(settings)),
     )
     consumer = build_servicebus_consumer(event_service)
-    _processed, failed = consumer.receive_once()
-    return 0 if failed == 0 else 1
+    _processed, failed, dead_lettered = consumer.receive_once()
+    return 0 if failed == 0 and dead_lettered == 0 else 1
 
 
 if __name__ == "__main__":
