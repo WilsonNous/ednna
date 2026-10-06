@@ -20,6 +20,8 @@ class ApprovalRequest:
     capability: str
     specialist_id: str
     reason: str
+    tenant_id: str | None = None
+    requested_by: str | None = None
     status: ApprovalStatus = ApprovalStatus.PENDING
     requested_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     decided_at: datetime | None = None
@@ -51,6 +53,8 @@ def new_approval_request(
     capability: str,
     specialist_id: str,
     reason: str,
+    tenant_id: str | None = None,
+    requested_by: str | None = None,
 ) -> ApprovalRequest:
     return ApprovalRequest(
         approval_id=str(uuid4()),
@@ -58,4 +62,6 @@ def new_approval_request(
         capability=capability,
         specialist_id=specialist_id,
         reason=reason,
+        tenant_id=tenant_id,
+        requested_by=requested_by,
     )
