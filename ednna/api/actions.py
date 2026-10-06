@@ -99,6 +99,51 @@ def create_action_blueprint(
             }
         )
 
+    @blueprint.get("/executions/<path:idempotency_key>/specialist-status")
+    @authenticated
+    def get_specialist_action_status(idempotency_key: str):
+        principal = g.principal
+
+        try:
+            authorization.require(principal, "ednna.actions:read")
+        except AuthorizationDeniedError:
+            return jsonify({"error": "forbidden"}), 403
+
+        if ledger is None:
+            return jsonify({"error": "action ledger unavailable"}), 503
+
+        try:
+            current = ledger.get(idempotency_key)
+        except Exception:
+            return jsonify({"error": "action ledger lookup failed"}), 502
+
+        if current is None or current.tenant_id != principal.tenant_id:
+            return jsonify({"error": "not found"}), 404
+
+        if current.status is not ActionExecutionStatus.UNCERTAIN:
+            return jsonify({"error": "action execution is not uncertain"}), 409
+
+        try:
+            specialist_status = gateway.lookup_action_status(
+                current.capability,
+                idempotency_key,
+                current.trace_id,
+            )
+        except Exception:
+            return jsonify({"error": "specialist status lookup failed"}), 502
+
+        return jsonify(
+            {
+                "idempotency_key": specialist_status.idempotency_key,
+                "specialist_id": specialist_status.specialist_id,
+                "state": specialist_status.state.value,
+                "trace_id": specialist_status.trace_id,
+                "evidence": list(specialist_status.evidence),
+                "reference": specialist_status.reference,
+                "ledger_status": current.status.value,
+            }
+        )
+
     @blueprint.post("/executions/<path:idempotency_key>/reconcile")
     @authenticated
     def reconcile_action_execution(idempotency_key: str):
