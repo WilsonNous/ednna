@@ -3,12 +3,18 @@ from __future__ import annotations
 from .orchestration.gateway import IntelligenceGateway, SpecialistClient
 from .orchestration.registry import SpecialistRegistry
 from .orchestration.router import IntelligenceRouter
+from .specialists.catalog import (
+    build_manifest_clients,
+    load_catalog_from_env,
+    register_catalog,
+)
 from .specialists.eddy import EDDY_DESCRIPTOR
 
 
 def build_registry() -> SpecialistRegistry:
     registry = SpecialistRegistry()
     registry.register(EDDY_DESCRIPTOR)
+    register_catalog(registry, load_catalog_from_env())
     return registry
 
 
@@ -27,6 +33,16 @@ def build_gateway(
         gateway.register_client(specialist_id, client)
 
     return gateway
+
+
+def build_catalog_gateway() -> IntelligenceGateway:
+    manifests = load_catalog_from_env()
+    registry = SpecialistRegistry()
+    registry.register(EDDY_DESCRIPTOR)
+    register_catalog(registry, manifests)
+
+    clients = build_manifest_clients(manifests)
+    return build_gateway(clients=clients, registry=registry)
 
 
 def build_eddy_gateway() -> IntelligenceGateway:
