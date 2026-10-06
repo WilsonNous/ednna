@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import signal
 import time
@@ -61,15 +62,26 @@ class SpecialistHealthWorker:
         signal.signal(signal.SIGTERM, self.request_stop)
         signal.signal(signal.SIGINT, self.request_stop)
 
+        logger = logging.getLogger("ednna.specialist_health")
+        exit_code = 0
+
         while not self._state.stopping:
-            self._refresher.refresh()
+            try:
+                self._refresher.refresh()
+                exit_code = 0
+            except Exception as exc:
+                exit_code = 1
+                logger.error(
+                    "specialist health refresh failed: %s",
+                    type(exc).__name__,
+                )
 
             if self._state.stopping:
                 break
 
             time.sleep(self._poll_interval_seconds)
 
-        return 0
+        return exit_code
 
 
 def main() -> int:
