@@ -191,6 +191,56 @@
         }
       },
       "additionalProperties": false
+    },
+    "SpecialistActionStatus": {
+      "type": "object",
+      "required": [
+        "contract_version",
+        "specialist_id",
+        "idempotency_key",
+        "state"
+      ],
+      "properties": {
+        "contract_version": {
+          "const": "1"
+        },
+        "specialist_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "succeeded",
+            "not_executed",
+            "in_progress",
+            "unknown"
+          ]
+        },
+        "trace_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   }
 }
